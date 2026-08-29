@@ -32,7 +32,7 @@ function ThreatClassBadge({ cls }) {
   );
 }
 
-function AlertRow({ alert, isExpanded, onToggle }) {
+function AlertRow({ alert, isExpanded, onToggle, onVerify }) {
   const severity = alert.severity?.toUpperCase();
   const isCritical = severity === 'CRITICAL';
   const localTime = new Date(alert.timestamp).toLocaleTimeString();
@@ -86,6 +86,17 @@ function AlertRow({ alert, isExpanded, onToggle }) {
           )}
         </td>
 
+        {/* Verify button */}
+        <td style={{ padding: '10px 8px' }} onClick={(e) => e.stopPropagation()}>
+          <button
+            className="verify-link-btn"
+            title="Send this alert_id to the Blockchain Verifier"
+            onClick={(e) => { e.stopPropagation(); onVerify(alert.alert_id); }}
+          >
+            ⛓ Verify
+          </button>
+        </td>
+
         {/* Expand toggle */}
         <td style={{ padding: '10px 12px', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
           {isExpanded ? '▲' : '▼'}
@@ -94,8 +105,8 @@ function AlertRow({ alert, isExpanded, onToggle }) {
 
       {isExpanded && (
         <tr>
-          <td colSpan={7} style={{ padding: 0 }}>
-            <EvidenceDrawer alert={alert} />
+          <td colSpan={8} style={{ padding: 0 }}>
+            <EvidenceDrawer alert={alert} onVerify={onVerify} />
           </td>
         </tr>
       )}
@@ -103,22 +114,55 @@ function AlertRow({ alert, isExpanded, onToggle }) {
   );
 }
 
-export default function ThreatFeed() {
+export default function ThreatFeed({ onVerifyRequest }) {
   const [alerts, setAlerts] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
+  const [paused, setPaused] = useState(false);
   const alertCountRef = useRef(0);
+  const pendingBufferRef = useRef([]);
+  const pausedRef = useRef(false);
 
   const handleMessage = useCallback((data) => {
-    alertCountRef.current += 1;
-    setAlerts((prev) => {
-      const next = [{ ...data, _key: alertCountRef.current }, ...prev];
-      return next.slice(0, MAX_ALERTS);
-    });
+    if (pausedRef.current) {
+      // Buffer incoming alerts while paused
+      pendingBufferRef.current.push(data);
+      // Force a re-render to update the pending count badge
+      setPaused(true);
+    } else {
+      alertCountRef.current += 1;
+      setAlerts((prev) => {
+        const next = [{ ...data, _key: alertCountRef.current }, ...prev];
+        return next.slice(0, MAX_ALERTS);
+      });
+    }
   }, []);
 
   const wsStatus = useWebSocket('/ws/alerts', handleMessage);
 
   const toggleRow = (id) => setExpandedId((prev) => (prev === id ? null : id));
+
+  const togglePause = () => {
+    const willPause = !pausedRef.current;
+    pausedRef.current = willPause;
+
+    if (!willPause) {
+      // Resuming — flush buffered alerts (newest first, prepended to existing list)
+      const buffered = pendingBufferRef.current.splice(0);
+      if (buffered.length > 0) {
+        setAlerts((prev) => {
+          // buffered is oldest-first (push order), so reverse a copy for newest-first display
+          const newAlerts = [...buffered].reverse().map((d) => {
+            alertCountRef.current += 1;
+            return { ...d, _key: alertCountRef.current };
+          });
+          return [...newAlerts, ...prev].slice(0, MAX_ALERTS);
+        });
+      }
+    }
+    setPaused(willPause);
+  };
+
+  const pendingCount = pendingBufferRef.current.length;
 
   return (
     <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -140,12 +184,26 @@ export default function ThreatFeed() {
         }}>
           {alerts.length}
         </span>
+
+        {/* Pause / Resume button */}
+        <button
+          className={`pause-btn ${paused ? 'paused' : ''}`}
+          onClick={togglePause}
+          title={paused ? 'Resume live stream' : 'Pause live stream'}
+        >
+          {paused ? (
+            <>▶ Resume {pendingCount > 0 && <span className="pending-badge">+{pendingCount}</span>}</>
+          ) : (
+            '⏸ Pause'
+          )}
+        </button>
+
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span
             className={`status-dot ${wsStatus === 'connected' ? 'connected' : wsStatus === 'connecting' ? 'connecting' : 'disconnected'}`}
           />
           <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-            {wsStatus === 'connected' ? 'Streaming' : wsStatus === 'connecting' ? 'Connecting…' : 'Offline'}
+            {paused ? 'Paused' : wsStatus === 'connected' ? 'Streaming' : wsStatus === 'connecting' ? 'Connecting…' : 'Offline'}
           </span>
         </div>
       </div>
@@ -155,8 +213,8 @@ export default function ThreatFeed() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Time', 'Source → Destination', 'Threat', 'Severity', 'Confidence', 'On-Chain TX', ''].map((h) => (
-                <th key={h} style={{
+              {['Time', 'Source → Destination', 'Threat', 'Severity', 'Confidence', 'On-Chain TX', '', ''].map((h, i) => (
+                <th key={i} style={{
                   padding: '8px 12px',
                   fontSize: '0.6rem',
                   fontWeight: 600,
@@ -177,8 +235,31 @@ export default function ThreatFeed() {
           <tbody>
             {alerts.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                  {wsStatus === 'connected' ? 'Waiting for threat alerts…' : 'Connecting to alert stream…'}
+                <td colSpan={8} style={{ padding: '60px 40px', textAlign: 'center' }}>
+                  {wsStatus !== 'connected' ? (
+                    <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                      Connecting to alert stream…
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '48px', height: '48px', borderRadius: '50%',
+                        border: '2px solid rgba(34,197,94,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '22px',
+                        boxShadow: '0 0 20px rgba(34,197,94,0.1)',
+                      }}>
+                        🛡
+                      </div>
+                      <div style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.9rem', letterSpacing: '0.05em' }}>
+                        System Armed — No Threats Detected
+                      </div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', lineHeight: 1.6, maxWidth: '380px' }}>
+                        Live sensor stream is active. Alerts will appear here the instant the AI engine detects a threat and POSTs to{' '}
+                        <code style={{ color: '#7dd3fc', fontSize: '0.7rem' }}>POST /api/alerts</code>.
+                      </div>
+                    </div>
+                  )}
                 </td>
               </tr>
             ) : (
@@ -188,6 +269,7 @@ export default function ThreatFeed() {
                   alert={alert}
                   isExpanded={expandedId === alert._key}
                   onToggle={() => toggleRow(alert._key)}
+                  onVerify={onVerifyRequest}
                 />
               ))
             )}

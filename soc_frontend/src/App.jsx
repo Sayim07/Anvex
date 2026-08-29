@@ -1,4 +1,5 @@
 // App.jsx — Anvex SOC Dashboard root layout
+import { useState, useCallback } from 'react';
 import SystemHealthBar from './components/SystemHealthBar';
 import ThreatFeed from './components/ThreatFeed';
 import BlockchainVerifier from './components/BlockchainVerifier';
@@ -84,6 +85,14 @@ function Header() {
 }
 
 export default function App() {
+  // Lifted state: lets ThreatFeed push an alert_id into BlockchainVerifier
+  const [pendingVerifyId, setPendingVerifyId] = useState(null);
+
+  const handleVerifyRequest = useCallback((alertId) => {
+    // Wrap in object so the same ID can be re-sent and force re-render
+    setPendingVerifyId({ id: alertId, ts: Date.now() });
+  }, []);
+
   return (
     <div style={{
       display: 'flex',
@@ -113,8 +122,8 @@ export default function App() {
           overflow: 'hidden',
           minHeight: 0,
         }}>
-          <ThreatFeed />
-          <BlockchainVerifier />
+          <ThreatFeed onVerifyRequest={handleVerifyRequest} />
+          <BlockchainVerifier externalRequest={pendingVerifyId} />
         </div>
       </main>
     </div>

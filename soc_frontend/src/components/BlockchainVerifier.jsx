@@ -1,5 +1,5 @@
 // BlockchainVerifier.jsx — On-chain alert verification widget
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 function VerifiedResult({ data }) {
   const blockDate = data.block_datetime
@@ -77,27 +77,44 @@ function ErrorResult({ message }) {
   );
 }
 
-export default function BlockchainVerifier() {
+export default function BlockchainVerifier({ externalRequest }) {
   const [alertId, setAlertId] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const panelRef = useRef(null);
 
-  const verify = async () => {
-    const id = alertId.trim();
-    if (!id) return;
+  // Auto-populate and verify when an external request comes in (from ThreatFeed rows)
+  useEffect(() => {
+    if (externalRequest?.id) {
+      setAlertId(externalRequest.id);
+      setResult(null);
+      setError(null);
+      // Scroll the verifier panel into view
+      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      // Auto-trigger verification after a short delay to allow state to settle
+      const timer = setTimeout(() => {
+        _verify(externalRequest.id);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [externalRequest]);
+
+  const _verify = async (id) => {
+    const trimmed = (id ?? alertId).trim();
+    if (!trimmed) return;
 
     setLoading(true);
     setResult(null);
     setError(null);
 
     try {
-      const res = await fetch(`/api/verify/${encodeURIComponent(id)}`);
+      const res = await fetch(`/api/verify/${encodeURIComponent(trimmed)}`);
       if (res.ok) {
         const data = await res.json();
         setResult(data);
       } else if (res.status === 404) {
-        setError(`Alert "${id}" not found on-chain. It may not have been notarized yet.`);
+        setError(`Alert "${trimmed}" not found on-chain. It may not have been notarized yet.`);
       } else if (res.status === 503) {
         setError('Blockchain node unavailable. Ensure Hardhat node is running.');
       } else {
@@ -111,12 +128,14 @@ export default function BlockchainVerifier() {
     }
   };
 
+  const verify = () => _verify(alertId);
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') verify();
   };
 
   return (
-    <div className="panel" style={{ padding: '18px 20px', minWidth: '320px', maxWidth: '440px' }}>
+    <div ref={panelRef} className="panel" style={{ padding: '18px 20px', minWidth: '320px', maxWidth: '440px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
