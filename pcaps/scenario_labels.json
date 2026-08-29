@@ -2,7 +2,7 @@
   {
     "pcap": "normal.pcap",
     "label": "normal",
-    "packet_count": 140
+    "packet_count": 210
   },
   {
     "pcap": "ddos.pcap",
@@ -17,12 +17,12 @@
   {
     "pcap": "dga.pcap",
     "label": "dga",
-    "packet_count": 10
+    "packet_count": 24
   },
   {
     "pcap": "ja4_malware.pcap",
     "label": "ja4_malware",
-    "packet_count": 4
+    "packet_count": 20
   },
   {
     "pcap": "c2_beacon.pcap",

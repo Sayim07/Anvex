@@ -2,6 +2,7 @@ from scapy.all import IP, TCP, UDP, DNS, DNSQR, Raw, wrpcap
 import random
 import os
 import json
+import time
 
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,8 +35,20 @@ def tcp_packet(src, dst, sport, dport, flags, seq=1000, ack=0, payload=b""):
 def generate_normal():
     packets = []
 
-    for i in range(20):
+    # Multiple internal clients
+    sources = [
+        "192.168.1.10",
+        "192.168.1.11",
+        "192.168.1.12"
+    ]
+
+    # Spread traffic over >60 seconds.
+    base_time = time.time()
+
+    for i in range(30):
+        src = sources[i % len(sources)]
         sport = 5000 + i
+
         client_seq = 1000 + (i * 100)
         server_seq = 2000 + (i * 100)
 
@@ -52,48 +65,55 @@ def generate_normal():
             "Hello"
         ).encode()
 
-        packets += [
+        connection_packets = [
             tcp_packet(
-                SRC, DST, sport, 80, "S",
+                src, DST, sport, 80, "S",
                 client_seq
             ),
 
             tcp_packet(
-                DST, SRC, 80, sport, "SA",
+                DST, src, 80, sport, "SA",
                 server_seq, client_seq + 1
             ),
 
             tcp_packet(
-                SRC, DST, sport, 80, "A",
+                src, DST, sport, 80, "A",
                 client_seq + 1, server_seq + 1
             ),
 
             tcp_packet(
-                SRC, DST, sport, 80, "PA",
+                src, DST, sport, 80, "PA",
                 client_seq + 1,
                 server_seq + 1,
                 request
             ),
 
             tcp_packet(
-                DST, SRC, 80, sport, "PA",
+                DST, src, 80, sport, "PA",
                 server_seq + 1,
                 client_seq + 1 + len(request),
                 response
             ),
 
             tcp_packet(
-                SRC, DST, sport, 80, "FA",
+                src, DST, sport, 80, "FA",
                 client_seq + 1 + len(request),
                 server_seq + 1 + len(response)
             ),
 
             tcp_packet(
-                DST, SRC, 80, sport, "FA",
+                DST, src, 80, sport, "FA",
                 server_seq + 1 + len(response),
                 client_seq + 2 + len(request)
             )
         ]
+
+        # Give packets realistic timestamps.
+        start = base_time + (i * 2.5) + random.uniform(0.0, 0.8)
+
+        for j, packet in enumerate(connection_packets):
+            packet.time = start + (j * random.uniform(0.002, 0.015))
+            packets.append(packet)
 
     return packets
 
@@ -111,7 +131,7 @@ def generate_ddos():
         src_ip = f"10.0.{(i // 250) + 1}.{(i % 250) + 1}"
         sport = random.randint(1024, 65535)
 
-        packets.append(
+        packet = (
             IP(src=src_ip, dst=target) /
             TCP(
                 sport=sport,
@@ -120,6 +140,9 @@ def generate_ddos():
                 seq=random.randint(1, 1000000)
             )
         )
+
+        packet.time = time.time() + (i * 0.001)
+        packets.append(packet)
 
     return packets
 
@@ -134,8 +157,8 @@ def generate_port_scan():
     src = SRC
     target = DST
 
-    for port in range(20, 121):
-        packets.append(
+    for i, port in enumerate(range(20, 121)):
+        packet = (
             IP(src=src, dst=target) /
             TCP(
                 sport=random.randint(30000, 60000),
@@ -145,11 +168,14 @@ def generate_port_scan():
             )
         )
 
+        packet.time = time.time() + (i * 0.02)
+        packets.append(packet)
+
     return packets
 
 
 # ============================================================
-# 4. DGA / DNS-LIKE TRAFFIC
+# 4. DGA / DNS TRAFFIC
 # ============================================================
 
 def generate_dga():
@@ -165,11 +191,29 @@ def generate_dga():
         "nqx72vbm.net",
         "kxp91zqt.com",
         "qmw48xzn.org",
-        "vkp62nqx.net"
+        "vkp62nqx.net",
+        "a9k2m7qx.net",
+        "p8z4v1mn.com",
+        "x7q3k9za.org",
+        "m2n8x5qp.net",
+        "q4v7z1kx.com",
+        "z9p3m6qn.org",
+        "k5x8q2mv.net",
+        "n7q1z4px.com",
+        "v3m9k6qa.org",
+        "x8p2q7zn.net",
+        "q6z1m4kx.com",
+        "m9x3v7qp.org",
+        "k2q8z5mn.net",
+        "p7n4x9qa.com"
     ]
+
+    base_time = time.time()
 
     for i, domain in enumerate(domains):
         query = DNS(
+            id=random.randint(1, 65535),
+            qr=0,
             rd=1,
             qd=DNSQR(
                 qname=domain,
@@ -177,7 +221,7 @@ def generate_dga():
             )
         )
 
-        packets.append(
+        packet = (
             IP(src=SRC, dst="8.8.8.8") /
             UDP(
                 sport=40000 + i,
@@ -186,42 +230,53 @@ def generate_dga():
             query
         )
 
+        packet.time = base_time + i * random.uniform(0.5, 2.0)
+        packets.append(packet)
+
     return packets
 
 
 # ============================================================
-# 5. JA4 / TLS-LIKE MALWARE TRAFFIC
+# 5. JA4 / TLS MALWARE TRAFFIC
 # ============================================================
 
 def generate_ja4_malware():
     packets = []
 
-    # Synthetic TLS ClientHello-like payload.
-    # The AI adapter can extract packet sizes and TLS-related
-    # raw information from the standardized events.
-
-    tls_payloads = [
-        b"\x16\x03\x01" + b"A" * 180,
-        b"\x16\x03\x01" + b"B" * 220,
-        b"\x16\x03\x01" + b"C" * 260,
-        b"\x16\x03\x01" + b"D" * 140
-    ]
-
-    for i, payload in enumerate(tls_payloads):
+    # Synthetic TLS ClientHello-like records.
+    # Metadata is included in payload so downstream adapters
+    # have explicit JA3/JA4 fields available.
+    for i in range(20):
         sport = 45000 + i
 
-        packets.append(
-            tcp_packet(
-                SRC,
-                DST,
-                sport,
-                443,
-                "PA",
-                seq=1000 + i * 500,
-                ack=2000,
-                payload=payload
-            )
+        ja3 = f"ja3_malware_{i % 3}"
+        ja4 = f"ja4_malware_{i % 4}"
+
+        metadata = (
+            f"JA3={ja3};JA4={ja4};TLS=1.2;"
+            f"SERVER_NAME=malicious-c2.example\r\n"
+        ).encode()
+
+        tls_payload = (
+            b"\x16\x03\x03"
+            + bytes(random.getrandbits(8) for _ in range(180 + (i % 5) * 20))
         )
+
+        payload = metadata + tls_payload
+
+        packet = tcp_packet(
+            SRC,
+            DST,
+            sport,
+            443,
+            "PA",
+            seq=1000 + i * 500,
+            ack=2000,
+            payload=payload
+        )
+
+        packet.time = time.time() + i * 0.25
+        packets.append(packet)
 
     return packets
 
@@ -233,9 +288,7 @@ def generate_ja4_malware():
 def generate_c2_beacon():
     packets = []
 
-    # Repeated, similarly-sized outbound connections.
-    # The regular packet sequence provides temporal information
-    # for IAT / periodicity calculations.
+    base_time = time.time()
 
     for i in range(30):
         sport = 46000 + i
@@ -246,18 +299,21 @@ def generate_c2_beacon():
             + b":status=ok"
         )
 
-        packets.append(
-            tcp_packet(
-                SRC,
-                DST,
-                sport,
-                8080,
-                "PA",
-                seq=1000 + i * 100,
-                ack=2000,
-                payload=beacon
-            )
+        packet = tcp_packet(
+            SRC,
+            DST,
+            sport,
+            8080,
+            "PA",
+            seq=1000 + i * 100,
+            ack=2000,
+            payload=beacon
         )
+
+        # Periodic beacon timing with small jitter.
+        packet.time = base_time + (i * 5.0) + random.uniform(-0.15, 0.15)
+
+        packets.append(packet)
 
     return packets
 
@@ -269,29 +325,30 @@ def generate_c2_beacon():
 def generate_exfiltration():
     packets = []
 
-    # Large outbound payloads with comparatively small
-    # inbound traffic.
+    base_time = time.time()
 
     for i in range(20):
         sport = 47000 + i
 
+        # Large realistic outbound application payload.
         payload = (
             b"EXFIL_DATA:"
-            + bytes(random.getrandbits(8) for _ in range(1400))
+            + bytes(random.getrandbits(8) for _ in range(3000))
         )
 
-        packets.append(
-            tcp_packet(
-                SRC,
-                DST,
-                sport,
-                9000,
-                "PA",
-                seq=1000 + i * 1500,
-                ack=2000,
-                payload=payload
-            )
+        packet = tcp_packet(
+            SRC,
+            DST,
+            sport,
+            9000,
+            "PA",
+            seq=1000 + i * 3200,
+            ack=2000,
+            payload=payload
         )
+
+        packet.time = base_time + i * 0.2
+        packets.append(packet)
 
     return packets
 
