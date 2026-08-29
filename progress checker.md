@@ -1,225 +1,247 @@
 # Project Progress Checker
 
-## 1. Project Summary
+## 1. PRD-aligned status overview
 
-This project is an AI-based cyber threat detection platform with three core layers:
+This project matches the requirements described in [PRD_Cyber_Threat_Detection.md](PRD_Cyber_Threat_Detection.md). The PRD clearly defines a three-layer system:
 
 1. Data pipeline and traffic processing
 2. AI/ML threat detection engine
-3. Full-stack backend + blockchain + SOC dashboard
+3. Trust layer + SOC dashboard
 
-The project currently has real implementation across all three layers, but they are at different completion levels.
+The actual repo reflects that structure and shows different completion levels across the three layers.
 
 ---
 
-## 2. Team Roles
+## 2. Team roles and ownership
 
-### Member 1: Ruparna
-Role: Data Pipeline & Benchmark Engineer
-
+### Ruparna — Data Pipeline & Benchmark Engineer
 Responsible for:
 - traffic generation
-- packet replay / capture preparation
+- packet capture / replay flow
 - Zeek metadata extraction
-- pipeline normalization
-- benchmarking and data stream flow
+- event normalization
+- benchmark and data quality validation
 
-### Member 2: Sarbottam
-Role: AI/ML & Threat Engine Lead
-
+### Sarbottam — AI/ML & Threat Detection Lead
 Responsible for:
 - feature extraction
 - threat detectors
-- ML scoring
-- explainability
-- final alert generation
+- model-based classification
+- scoring and confidence logic
+- evaluating threat-specific evidence
 
-### Member 3: Sayim
-Role: Full-Stack & Web3 Developer
-
+### Sayim — Full-Stack & Web3 Developer
 Responsible for:
-- backend APIs
+- FastAPI backend
 - blockchain notarization
-- real-time WebSocket feeds
-- SOC dashboard UX
-- integration layer between AI output and frontend
+- WebSocket live streaming
+- SOC dashboard
+- API contract compatibility with AI output
 
 ---
 
-## 3. Current Progress by Member
+## 3. Progress by phase and member
 
-### Ruparna: Data Pipeline
-Status: Strong progress, major pipeline work has already been added
+### Phase 1 — Trust Layer (Hardhat + Solidity)
+Owner: Sayim
+
+Status: Implemented and largely complete
 
 Completed work:
-- data processing pipeline implemented
-- parser, producer, consumer, normalizer added
-- benchmark scripts created
-- standardized event artifacts generated
-- PCAP generation support added
+- Solidity smart contract added in [trust_layer/contracts/ForensicAuditLedger.sol](trust_layer/contracts/ForensicAuditLedger.sol)
+- deployment script added in [trust_layer/scripts/deploy.js](trust_layer/scripts/deploy.js)
+- Hardhat config and package setup added in [trust_layer/hardhat.config.js](trust_layer/hardhat.config.js) and [trust_layer/package.json](trust_layer/package.json)
+- contract exposes the required write and verification functions
+- event schema matches the PRD
 
-Evidence in repo:
-- pipeline/parser.py
-- pipeline/producer.py
-- pipeline/consumer.py
-- pipeline/normalize.py
-- pipeline/standardized_events.json
-- pipeline/zeek_events.json
-- benchmark/benchmark.py
-- benchmark/run_pipeline.sh
-- pcaps/create_pcap.py
+PRD match:
+- FR-1.1 to FR-1.5 are all covered by the current implementation
 
-Progress estimate: 60% - 75%
+Progress estimate: 85% - 95%
 
 Remaining work:
-- connect pipeline to real AI detection engine
-- ensure output format matches AI detector expectations
-- validate real end-to-end ingestion
-- benchmark stability and production quality
-
-Next priority:
-- stabilize the data pipeline output format and ensure it is AI-ready
+- runtime validation in a live Hardhat node
+- final verification of deployment and function behavior in practice
 
 ---
 
-### Sarbottam: AI/ML Threat Engine
-Status: Early but real progress
+### Phase 2 — Backend (FastAPI + web3.py)
+Owner: Sayim
+
+Status: Implemented and strongly advanced
 
 Completed work:
-- DDoS feature extraction added
-- DDoS detector implemented
-- initial tests written for DDoS logic
+- backend created in [dashboard_backend/main.py](dashboard_backend/main.py)
+- streaming system metrics via WebSockets
+- mock AI alert generator implemented
+- blockchain notarization integration added
+- API ingest route added
+- verification endpoint added
+- health endpoint added
 
-Evidence in repo:
-- ai_engine/features/ddos_features.py
-- ai_engine/detectors/ddos_detector.py
-- ai_engine/tests/test_ddos_detector.py
-- ai_engine/tests/test_ddos_features.py
-
-Progress estimate: 25% - 35%
-
-Remaining work:
-- expand beyond DDoS to all threat classes
-- implement the rest of the six detectors
-- connect to real pipeline output
-- produce the exact alert scheme expected by backend
-- add explainability/scoring logic
-
-Next priority:
-- convert the current DDoS baseline into a full multi-threat detector framework
-
----
-
-### Sayim: Backend + Blockchain + Dashboard
-Status: Most complete implementation among the three
-
-Completed work:
-- smart contract for alert notarization implemented
-- contract deployment script created
-- FastAPI backend implemented
-- WebSocket feeds created for alerts and system metrics
-- mock generator created for live alerts
-- SOC dashboard UI created
-- blockchain verification widget added
-- mock-first architecture established
-
-Evidence in repo:
-- trust_layer/contracts/ForensicAuditLedger.sol
-- trust_layer/scripts/deploy.js
-- trust_layer/hardhat.config.js
-- dashboard_backend/main.py
-- soc_frontend/src/App.jsx
-- soc_frontend/src/components/ThreatFeed.jsx
-- soc_frontend/src/components/SystemHealthBar.jsx
-- soc_frontend/src/components/BlockchainVerifier.jsx
-- soc_frontend/src/components/EvidenceDrawer.jsx
+PRD match:
+- FR-2.1 through FR-2.7 are directly represented in the code
 
 Progress estimate: 80% - 90%
 
 Remaining work:
-- real runtime validation across all services
-- ensure full end-to-end data flow works
-- verify blockchain + backend + frontend interaction in one run
-- connect to real AI output when pipeline and detectors are ready
-
-Next priority:
-- keep the integration layer stable and ready for real data
+- verify live backend + Hardhat integration in one clean run
+- ensure compatibility with real pipeline output when mock mode is disabled
+- fix any runtime issues discovered under actual execution
 
 ---
 
-## 4. Overall Team Progress
+### Phase 3 — SOC Dashboard (React + Vite)
+Owner: Sayim
 
-| Member | Area | Completion Estimate | Status |
+Status: Implemented and functionally aligned to PRD
+
+Completed work:
+- main app layout in [soc_frontend/src/App.jsx](soc_frontend/src/App.jsx)
+- live metrics panel in [soc_frontend/src/components/SystemHealthBar.jsx](soc_frontend/src/components/SystemHealthBar.jsx)
+- live threat feed in [soc_frontend/src/components/ThreatFeed.jsx](soc_frontend/src/components/ThreatFeed.jsx)
+- evidence drawer in [soc_frontend/src/components/EvidenceDrawer.jsx](soc_frontend/src/components/EvidenceDrawer.jsx)
+- blockchain verification widget in [soc_frontend/src/components/BlockchainVerifier.jsx](soc_frontend/src/components/BlockchainVerifier.jsx)
+- WebSocket hook in [soc_frontend/src/hooks/useWebSocket.js](soc_frontend/src/hooks/useWebSocket.js)
+
+PRD match:
+- FR-3.1 through FR-3.6 are represented in the frontend code
+
+Progress estimate: 80% - 90%
+
+Remaining work:
+- final live test against real backend stream
+- verify all UI states with actual data, not only mock data
+
+---
+
+### Data pipeline and traffic processing
+Owner: Ruparna
+
+Status: Major progress, key pipeline files exist
+
+Completed work:
+- parser added in [pipeline/parser.py](pipeline/parser.py)
+- producer added in [pipeline/producer.py](pipeline/producer.py)
+- consumer added in [pipeline/consumer.py](pipeline/consumer.py)
+- normalizer added in [pipeline/normalize.py](pipeline/normalize.py)
+- standardized events and Zeek event data files added
+- benchmark scripts added in [benchmark/benchmark.py](benchmark/benchmark.py) and [benchmark/run_pipeline.sh](benchmark/run_pipeline.sh)
+- PCAP generation support added in [pcaps/create_pcap.py](pcaps/create_pcap.py)
+
+PRD alignment:
+- This matches the intended pipeline layer described in the PRD and is the strongest upstream contribution in the repo
+
+Progress estimate: 60% - 75%
+
+Remaining work:
+- connect the pipeline output to the AI detector schema
+- ensure the structured flow is directly usable by the detection engine
+- validate real traffic flow end-to-end
+
+---
+
+### AI/ML engine
+Owner: Sarbottam
+
+Status: In progress, but still behind the other two areas
+
+Completed work:
+- DDoS feature extraction implemented in [ai_engine/features/ddos_features.py](ai_engine/features/ddos_features.py)
+- DDoS detector implemented in [ai_engine/detectors/ddos_detector.py](ai_engine/detectors/ddos_detector.py)
+- initial tests added in [ai_engine/tests/test_ddos_detector.py](ai_engine/tests/test_ddos_detector.py) and [ai_engine/tests/test_ddos_features.py](ai_engine/tests/test_ddos_features.py)
+
+PRD alignment:
+- The PRD expects a broader detection engine beyond DDoS, so this is still partial completion
+
+Progress estimate: 25% - 35%
+
+Remaining work:
+- implement the remaining threat categories
+- integrate feature extraction for all six classes
+- connect outputs to the exact alert schema defined in the PRD
+- validate with real or realistic pipeline data
+
+---
+
+## 4. Team-wise completion estimate
+
+| Member | Area | Completion estimate | Current status |
 |---|---|---:|---|
-| Ruparna | Data pipeline | 60% - 75% | Strong progress, main upstream work is done |
-| Sarbottam | AI/ML engine | 25% - 35% | Early but real implementation |
-| Sayim | Backend + blockchain + dashboard | 80% - 90% | Most complete layer |
+| Sayim | Trust layer + backend + dashboard | 80% - 90% | Most complete and integration-ready |
+| Ruparna | Data pipeline | 60% - 75% | Strong pipeline progress |
+| Sarbottam | AI/ML detector engine | 25% - 35% | Early but real implementation |
 
-Overall project readiness: approximately 55% - 65%
+Overall system readiness: approximately 55% - 65%
 
----
-
-## 5. Dependency Order and Next Flow
-
-The correct order for the remaining work is:
-
-1. Ruparna continues pipeline finalization
-   - ensure clean AI-ready data flow
-2. Sarbottam builds the remaining threat detectors
-   - use the pipeline output as the real input
-3. Sayim integrates the final real data path into backend + UI
-   - blockchain notarization
-   - dashboard alert feed
-   - verification widget
-
-This flow matters because the AI engine and dashboard both depend on a valid upstream data stream.
+This is not final completion, because the system still needs live integration between all three layers.
 
 ---
 
-## 6. Recommended Next Actions
+## 5. Dependency order for the next milestone
+
+The PRD makes the dependency clearly visible:
+
+1. Ruparna must finalize the real data flow
+   - traffic -> normalized events -> AI-ready schema
+2. Sarbottam must turn that into real threat detection
+   - detector outputs aligned to the PRD alert schema
+3. Sayim must finalize integration and validation
+   - backend ingest + blockchain + dashboard live flow
+
+This ordering is important because the backend and dashboard are designed to accept the AI output format and should not be blocked by incomplete data sources.
+
+---
+
+## 6. What should happen next
 
 ### Ruparna
-- finish the pipeline normalization output
-- ensure compatibility with AI detector inputs
-- validate benchmark outputs and real traffic structure
+Next priority:
+- ensure pipeline outputs are consistent and use-ready for the AI layer
+- validate real event structure against the PRD schema
+- finish the pipeline-to-AI compatibility layer
 
 ### Sarbottam
-- expand from DDoS to all remaining threat categories
-- standardize the alert schema for backend consumption
-- test with realistic pipeline data
+Next priority:
+- move beyond DDoS baseline
+- implement all remaining detection categories
+- align outputs to the expected backend schema
 
 ### Sayim
-- verify the stack in one end-to-end run
-- ensure mock mode remains compatible with real AI data
-- keep the backend API and dashboard integration ready
+Next priority:
+- verify the deployed contract, backend, and dashboard together in one working flow
+- confirm the mock-first architecture remains compatible with the real AI schema
+- be ready to accept real AI alerts without code refactor
 
 ---
 
-## 7. Final Conclusion
+## 7. Current project conclusion
 
-The project is moving in the right direction, but it is not yet fully integrated end-to-end.
+The repo and the PRD line up well:
 
-- Sayim has the most advanced and complete layer.
-- Ruparna has created the strongest upstream pipeline foundation.
-- Sarbottam is still building the detection layer and needs to extend the work beyond DDoS.
+- Sayim has the most complete layer and is effectively the integration lead
+- Ruparna has built the strongest upstream data-processing foundation
+- Sarbottam has started the detection engine but is still behind the target PRD scope
 
-The next successful milestone should be:
+The project is not finished yet, but the work is well organized and the next milestone is clear:
 
-Real traffic data flowing from Ruparna's pipeline into Sarbottam's detectors, with Sayim's backend and dashboard consuming the final alerts and notarizing them on-chain.
+Real data pipeline output should feed the AI detection engine, whose threat alerts should then be consumed by Sayim's backend and displayed in the blockchain-backed SOC dashboard.
 
 ---
 
-## 8. Teamwise Action Summary
+## 8. Final action summary
 
-### Need to do next
-- Ruparna: finish pipeline-to-AI integration
-- Sarbottam: build the full threat detection engine
-- Sayim: complete end-to-end integration validation
+### Who is ready now
+- Sayim: yes, for integration and runtime validation
+- Ruparna: yes, for final pipeline stabilization
+- Sarbottam: not yet for full integration, but the DDoS work is real progress
 
-### Who is leading currently
-- Sayim: integration lead
-- Ruparna: data pipeline lead
-- Sarbottam: AI detection lead
+### Who should do what next
+- Ruparna: finish data flow quality and AI-ready format
+- Sarbottam: expand from DDoS to the full threat model set
+- Sayim: finish end-to-end validation and wiring
 
-### Best current working sequence
+### Best next sequence
 Ruparna -> Sarbottam -> Sayim
+
+This is the most realistic and PRD-aligned execution order for the remaining project completion.
