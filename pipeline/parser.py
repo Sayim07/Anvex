@@ -1,7 +1,11 @@
 import json
+import os
+import sys
 
 LOG_FILE = "../zeek/logs/conn.log"
 OUTPUT_FILE = "zeek_events.json"
+
+LABEL = sys.argv[1] if len(sys.argv) > 1 else "normal"
 
 with open(LOG_FILE, "r") as file:
     lines = file.readlines()
@@ -30,11 +34,16 @@ for line in lines:
         continue
 
     event = dict(zip(fields, values))
+
+    # Preserve the scenario label for the AI pipeline.
+    event["label"] = LABEL
+
     events.append(event)
 
 with open(OUTPUT_FILE, "w") as file:
     json.dump(events, file, indent=2)
 
-print(f"Created {OUTPUT_FILE} with {len(events)} event(s)")
-
-
+print(
+    f"Created {OUTPUT_FILE} with "
+    f"{len(events)} event(s), label={LABEL}"
+)

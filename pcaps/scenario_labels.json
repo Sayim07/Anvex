@@ -1,0 +1,37 @@
+[
+  {
+    "pcap": "normal.pcap",
+    "label": "normal",
+    "packet_count": 140
+  },
+  {
+    "pcap": "ddos.pcap",
+    "label": "ddos",
+    "packet_count": 300
+  },
+  {
+    "pcap": "port_scan.pcap",
+    "label": "port_scan",
+    "packet_count": 101
+  },
+  {
+    "pcap": "dga.pcap",
+    "label": "dga",
+    "packet_count": 10
+  },
+  {
+    "pcap": "ja4_malware.pcap",
+    "label": "ja4_malware",
+    "packet_count": 4
+  },
+  {
+    "pcap": "c2_beacon.pcap",
+    "label": "c2_beacon",
+    "packet_count": 30
+  },
+  {
+    "pcap": "exfiltration.pcap",
+    "label": "exfiltration",
+    "packet_count": 20
+  }
+]
