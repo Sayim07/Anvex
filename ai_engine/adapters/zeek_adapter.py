@@ -1,3 +1,26 @@
+"""
+ZeekAdapter
+===========
+Converts standardised Zeek connection events (pipeline/scenario_output/)
+into the inputs and feature vectors required by the Anvex AI detectors.
+
+Supported event type
+--------------------
+Only ``connection`` events (Zeek conn.log) are currently produced by
+Ruparna's pipeline.  DNS (dns.log) and TLS (ssl.log) events are NOT yet
+present in the scenario output.  Methods that depend on those event types
+contain a clear documented limitation rather than fabricated values.
+
+Field availability notes
+------------------------
+- No TCP flag counts  -> syn_ack_ratio derived from ``history`` proxy.
+- No DNS ``query``    -> subdomain_entropy / ngram_probability = 0.0 (stub).
+- No JA3/JA4 strings -> ja3 / ja4 = None (stub).
+- No per-packet sizes -> mean_packet_size approximated as orig_bytes/orig_pkts;
+                         packet_size_variance = 0.0 (requires packet-level data).
+- No historical volume baseline -> volume_baseline_ratio = 1.0 (dev fallback).
+"""
+
 import json
 from pathlib import Path
 
@@ -5,38 +28,138 @@ from ai_engine.features.ddos_features import extract_ddos_features
 from ai_engine.features.scan_features import extract_scan_features
 from ai_engine.features.c2_features import extract_c2_features
 from ai_engine.features.exfil_features import extract_exfil_features
+from ai_engine.features.dga_features import extract_dga_features
+from ai_engine.features.ja4_features import extract_ja4_features
 
+
+# ---------------------------------------------------------------------------
+# Zeek ``history`` field helpers
+# ---------------------------------------------------------------------------
+# Zeek encodes the packet exchange history as a string of single-character
+# codes.  Upper-case = originator; lower-case = responder.
+#   S / s  -- SYN sent/received
+#   A / a  -- ACK sent/received
+#   D / d  -- data packet
+#   F / f  -- FIN
+#   R / r  -- RST
+#   H      -- SYN+ACK (half-open reply)
+#
+# These are *connection-level* aggregates, not per-packet counts, so the
+# derived SYN/ACK counts are approximate proxies only.
+
+def _syn_ack_from_history(history_string):
+    """
+    Derive approximate SYN and ACK counts from a Zeek history string.
+
+    Returns (syn_count, ack_count).
+
+    Limitation: history is a *set* of observed codes, not a packet count.
+    'S' means at least one SYN was observed, not that exactly one was sent.
+    """
+    if not history_string:
+        return 0, 0
+
+    h = history_string  # e.g. "ShADdFf" or "S" or "D"
+
+    # Upper-case 'S' = originator SYN
+    syn_count = h.count("S")
+
+    # Upper-case 'A' = originator ACK; lower-case 'a' = responder ACK
+    ack_count = h.count("A") + h.count("a")
+
+    return syn_count, ack_count
+
+
+def _aggregate_syn_ack(events):
+    """Sum approximate syn/ack counts across all events via history proxy."""
+    total_syn = 0
+    total_ack = 0
+    for event in events:
+        history = event.get("history", "")
+        s, a = _syn_ack_from_history(history)
+        total_syn += s
+        total_ack += a
+    return total_syn, total_ack
+
+
+# ---------------------------------------------------------------------------
+# Packet-size approximation helper
+# ---------------------------------------------------------------------------
+
+def _approximate_packet_sizes(events):
+    """
+    Approximate per-packet sizes from connection-level byte totals.
+
+    Each connection contributes one representative size:
+        (orig_bytes + resp_bytes) / (orig_pkts + resp_pkts)
+
+    This is a coarse approximation.  Real per-packet sizes require
+    Zeek packet-capture data.  Variance from these values will
+    significantly understate the true per-packet variance.
+
+    Returns a list of float sizes (one per connection with non-zero packets).
+    """
+    sizes = []
+    for event in events:
+        orig_bytes = float(event.get("orig_bytes", 0) or 0)
+        resp_bytes = float(event.get("resp_bytes", 0) or 0)
+        orig_pkts = float(event.get("orig_pkts", 0) or 0)
+        resp_pkts = float(event.get("resp_pkts", 0) or 0)
+
+        total_bytes = orig_bytes + resp_bytes
+        total_pkts = orig_pkts + resp_pkts
+
+        if total_pkts > 0:
+            sizes.append(total_bytes / total_pkts)
+
+    return sizes
+
+
+# ---------------------------------------------------------------------------
+# ZeekAdapter
+# ---------------------------------------------------------------------------
 
 class ZeekAdapter:
     """
-    Converts standardized Zeek connection events into
+    Converts standardised Zeek connection events into
     inputs/features required by the Anvex AI detectors.
 
-    This adapter currently supports connection-level data.
-    DNS and TLS/JA4 integration will be added when those
-    event types become available.
+    This adapter supports connection-level data only.
+    DNS and TLS/JA4 integration requires upstream pipeline changes
+    (see prepare_dga_inputs and prepare_ja4_inputs docstrings).
     """
 
     def __init__(self, events):
         if not events:
             raise ValueError("No Zeek events provided.")
-
         self.events = events
+
+    # ------------------------------------------------------------------
+    # Constructors
+    # ------------------------------------------------------------------
 
     @classmethod
     def from_json(cls, path):
-        """Load standardized Zeek events from JSON."""
-
+        """Load standardised Zeek events from a JSON file."""
         path = Path(path)
-
-        with path.open("r", encoding="utf-8") as file:
-            events = json.load(file)
-
+        with path.open("r", encoding="utf-8") as fh:
+            events = json.load(fh)
         return cls(events)
 
-    # ---------------------------------
-    # Common data
-    # ---------------------------------
+    @classmethod
+    def from_scenario_json(cls, path):
+        """
+        Load a per-scenario JSON file (e.g. pipeline/scenario_output/ddos.json).
+
+        Identical to from_json but makes the intent explicit: one file
+        corresponds to one scenario/label, and all events share the same
+        label field.
+        """
+        return cls.from_json(path)
+
+    # ------------------------------------------------------------------
+    # Common data accessors
+    # ------------------------------------------------------------------
 
     def source_ips(self):
         return [
@@ -59,9 +182,37 @@ class ZeekAdapter:
             if event.get("timestamp") is not None
         )
 
-    # ---------------------------------
+    def get_labels(self):
+        """
+        Return the list of unique labels present in the loaded events.
+
+        For a per-scenario file this will be a single-element list.
+        For all_standardized_events.json it will be all seven labels.
+        """
+        return list({
+            event.get("label")
+            for event in self.events
+            if event.get("label") is not None
+        })
+
+    def primary_label(self):
+        """
+        Return the single label for a per-scenario file.
+
+        Raises ValueError if more than one label is present.
+        """
+        labels = self.get_labels()
+        if len(labels) == 1:
+            return labels[0]
+        raise ValueError(
+            f"Multiple labels present ({labels}). "
+            "Use from_scenario_json() on a single-label file, "
+            "or call get_labels() and handle each group separately."
+        )
+
+    # ------------------------------------------------------------------
     # DDoS
-    # ---------------------------------
+    # ------------------------------------------------------------------
 
     def prepare_ddos_inputs(self):
         packet_count = sum(
@@ -78,20 +229,18 @@ class ZeekAdapter:
                 1e-6,
             )
         else:
-            duration_seconds = sum(
-                float(event.get("duration", 0))
-                for event in self.events
+            duration_seconds = max(
+                sum(
+                    float(event.get("duration", 0))
+                    for event in self.events
+                ),
+                1e-6,
             )
 
-        # TCP flags are not currently preserved by
-        # standardized_events.json, so true SYN counts
-        # cannot be reconstructed reliably.
-        syn_count = 0
-
-        ack_count = sum(
-            float(event.get("resp_pkts", 0))
-            for event in self.events
-        )
+        # Use history-field proxy for SYN/ACK counts.
+        # Limitation: history 'S' indicates at least one SYN was observed;
+        # it is not an exact per-packet count.
+        syn_count, ack_count = _aggregate_syn_ack(self.events)
 
         return {
             "source_ips": self.source_ips(),
@@ -102,13 +251,11 @@ class ZeekAdapter:
         }
 
     def extract_ddos_features(self):
-        inputs = self.prepare_ddos_inputs()
+        return extract_ddos_features(**self.prepare_ddos_inputs())
 
-        return extract_ddos_features(**inputs)
-
-    # ---------------------------------
+    # ------------------------------------------------------------------
     # Port Scan
-    # ---------------------------------
+    # ------------------------------------------------------------------
 
     def prepare_scan_inputs(self):
         total_connections = len(self.events)
@@ -116,10 +263,7 @@ class ZeekAdapter:
         failed_connections = sum(
             1
             for event in self.events
-            if event.get("conn_state") not in {
-                "SF",
-                "S1",
-            }
+            if event.get("conn_state") not in {"SF", "S1"}
         )
 
         return {
@@ -129,13 +273,109 @@ class ZeekAdapter:
         }
 
     def extract_scan_features(self):
-        inputs = self.prepare_scan_inputs()
+        return extract_scan_features(**self.prepare_scan_inputs())
 
-        return extract_scan_features(**inputs)
+    # ------------------------------------------------------------------
+    # DGA
+    # ------------------------------------------------------------------
 
-    # ---------------------------------
+    def prepare_dga_inputs(self):
+        """
+        Prepare DGA feature inputs from Zeek events.
+
+        LIMITATION -- upstream data required
+        -------------------------------------
+        DGA detection requires DNS query strings (the ``query`` field from
+        Zeek dns.log).  The current standardised event schema is connection-
+        level only and does not include DNS fields.
+
+        This method returns subdomain=None, which causes extract_dga_features
+        to produce 0.0 for both subdomain_entropy and ngram_probability.
+
+        To unblock DGA detection, Ruparna needs to enrich the scenario output
+        with Zeek dns.log records containing at minimum:
+            { "event_type": "dns", "query": "<full_query>",
+              "subdomain": "<left_label_of_registered_domain>" }
+
+        Until that enrichment is available, DGA feature values are 0.0 and
+        DGA detector results are not meaningful.
+        """
+        # Read query/subdomain if upstream ever adds it.
+        queries = [
+            event.get("query") or event.get("subdomain")
+            for event in self.events
+            if event.get("query") or event.get("subdomain")
+        ]
+
+        if queries:
+            # Use the longest query string as most representative.
+            subdomain = max(queries, key=len)
+        else:
+            # Upstream DNS field is absent from the current scenario schema.
+            subdomain = None
+
+        return {
+            "subdomain": subdomain,
+        }
+
+    def extract_dga_features(self):
+        return extract_dga_features(**self.prepare_dga_inputs())
+
+    # ------------------------------------------------------------------
+    # JA4 / TLS
+    # ------------------------------------------------------------------
+
+    def prepare_ja4_inputs(self):
+        """
+        Prepare JA4/TLS feature inputs from Zeek events.
+
+        LIMITATION -- upstream data required
+        -------------------------------------
+        JA4 detection requires TLS fingerprint strings (ja4, ja3) from
+        Zeek ssl.log.  The current standardised event schema is connection-
+        level only and does not include TLS fields.
+
+        This method returns:
+        - ja4=None, ja3=None  (TLS fingerprints absent upstream)
+        - packet_sizes approximated as (orig_bytes+resp_bytes)/total_pkts
+          (coarse proxy; real SPLT requires per-packet capture data)
+        - packet_times=[]  (per-packet timestamps absent upstream)
+
+        To unblock JA4 detection, Ruparna needs to enrich the scenario output
+        with Zeek ssl.log records containing at minimum:
+            { "event_type": "ssl", "ja3": "<md5>", "ja4": "<fingerprint>",
+              "orig_bytes": <int>, "resp_bytes": <int> }
+        """
+        # Read JA3/JA4 if upstream ever adds them.
+        ja4 = next(
+            (event.get("ja4") for event in self.events if event.get("ja4")),
+            None,
+        )
+        ja3 = next(
+            (event.get("ja3") for event in self.events if event.get("ja3")),
+            None,
+        )
+
+        # Approximate packet sizes from connection byte totals.
+        # Variance will be underestimated -- see helper docstring.
+        packet_sizes = _approximate_packet_sizes(self.events)
+
+        # Per-packet timestamps are unavailable from conn.log.
+        packet_times = []
+
+        return {
+            "ja4": ja4,
+            "ja3": ja3,
+            "packet_sizes": packet_sizes,
+            "packet_times": packet_times,
+        }
+
+    def extract_ja4_features(self):
+        return extract_ja4_features(**self.prepare_ja4_inputs())
+
+    # ------------------------------------------------------------------
     # C2 Beacon
-    # ---------------------------------
+    # ------------------------------------------------------------------
 
     def prepare_c2_inputs(self):
         timestamps = self.timestamps()
@@ -150,30 +390,29 @@ class ZeekAdapter:
         }
 
     def extract_c2_features(self):
-        inputs = self.prepare_c2_inputs()
+        return extract_c2_features(**self.prepare_c2_inputs())
 
-        return extract_c2_features(**inputs)
-
-    # ---------------------------------
+    # ------------------------------------------------------------------
     # Exfiltration
-    # ---------------------------------
+    # ------------------------------------------------------------------
 
     def prepare_exfil_inputs(self):
         outbound_bytes = sum(
-            float(event.get("orig_bytes", 0))
+            float(event.get("orig_bytes", 0) or 0)
             for event in self.events
         )
 
         inbound_bytes = sum(
-            float(event.get("resp_bytes", 0))
+            float(event.get("resp_bytes", 0) or 0)
             for event in self.events
         )
 
         current_volume = outbound_bytes + inbound_bytes
 
-        # No historical baseline is currently supplied
-        # by the standardized Zeek data.
-        baseline_volume = current_volume
+        # No historical baseline is currently supplied by the standardised
+        # Zeek data.  Setting baseline = current produces ratio = 1.0.
+        # This is a development fallback only -- not production baselining.
+        baseline_volume = current_volume if current_volume > 0 else 1.0
 
         return {
             "outbound_bytes": outbound_bytes,
@@ -183,6 +422,66 @@ class ZeekAdapter:
         }
 
     def extract_exfil_features(self):
-        inputs = self.prepare_exfil_inputs()
+        return extract_exfil_features(**self.prepare_exfil_inputs())
 
-        return extract_exfil_features(**inputs)
+    # ------------------------------------------------------------------
+    # Full 13-feature vector assembly
+    # ------------------------------------------------------------------
+
+    def assemble_feature_vector(self):
+        """
+        Assemble the complete 13-feature AI input vector.
+
+        Returns a dict with all 13 named features expected by the XGBoost
+        model and SHAP explainer.  Feature names match the training schema
+        in ai_engine/data/training.csv exactly.
+
+        Feature availability by source
+        --------------------------------
+        AVAILABLE (computed from connection events):
+          source_ip_entropy, pps, port_fanout,
+          connection_failure_rate, iat_variance, fft_periodicity
+
+        PARTIAL (approximated or degenerate for zero-byte events):
+          syn_ack_ratio       -- history-field proxy, not exact flag counts
+          mean_packet_size    -- orig_bytes/orig_pkts approx; 0 if bytes=0
+          packet_size_variance-- approximated; underestimated; 0 if bytes=0
+          outbound_inbound_ratio -- 0.0 when orig_bytes=resp_bytes=0
+          volume_baseline_ratio  -- always 1.0 (no historical baseline)
+
+        UNAVAILABLE (upstream fields absent from current scenario schema):
+          subdomain_entropy   -- requires dns.log query field (0.0 fallback)
+          ngram_probability   -- requires dns.log query field (0.0 fallback)
+
+        Returns
+        -------
+        dict : keys are the 13 feature names, values are float.
+        """
+        ddos_feat = self.extract_ddos_features()
+        scan_feat = self.extract_scan_features()
+        dga_feat = self.extract_dga_features()
+        ja4_feat = self.extract_ja4_features()
+        c2_feat = self.extract_c2_features()
+        exfil_feat = self.extract_exfil_features()
+
+        return {
+            # DDoS features
+            "source_ip_entropy": ddos_feat["source_ip_entropy"],
+            "pps": ddos_feat["pps"],
+            "syn_ack_ratio": ddos_feat["syn_ack_ratio"],
+            # Port Scan features
+            "port_fanout": float(scan_feat["port_fanout"]),
+            "connection_failure_rate": scan_feat["connection_failure_rate"],
+            # DGA features  (0.0 when DNS query field absent upstream)
+            "subdomain_entropy": dga_feat["subdomain_entropy"],
+            "ngram_probability": dga_feat["ngram_probability"],
+            # JA4/TLS features  (approximated from byte totals)
+            "mean_packet_size": ja4_feat["mean_packet_size"],
+            "packet_size_variance": ja4_feat["packet_size_variance"],
+            # C2 features
+            "iat_variance": c2_feat["iat_variance"],
+            "fft_periodicity": c2_feat["fft_periodicity"],
+            # Exfil features
+            "outbound_inbound_ratio": exfil_feat["outbound_inbound_ratio"],
+            "volume_baseline_ratio": exfil_feat["volume_baseline_ratio"],
+        }

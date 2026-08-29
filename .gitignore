@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 
+# Virtual environment
+.venv/
+
+
 # Jupyter
 .ipynb_checkpoints/
 
