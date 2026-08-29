@@ -1,0 +1,15 @@
+{
+  "name": "anvex-trust-layer",
+  "version": "1.0.0",
+  "description": "ForensicAuditLedger smart contract for Anvex threat notarization",
+  "scripts": {
+    "node": "hardhat node",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "test": "hardhat test"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0"
+  }
+}
