@@ -144,23 +144,33 @@ Remaining work:
 ### AI/ML engine
 Owner: Sarbottam
 
-Status: In progress, but still behind the other two areas
+Status: Implemented / Complete for current available data, pending final validation with improved upstream telemetry.
 
 Completed work:
-- DDoS feature extraction implemented in [ai_engine/features/ddos_features.py](ai_engine/features/ddos_features.py)
-- DDoS detector implemented in [ai_engine/detectors/ddos_detector.py](ai_engine/detectors/ddos_detector.py)
-- initial tests added in [ai_engine/tests/test_ddos_detector.py](ai_engine/tests/test_ddos_detector.py) and [ai_engine/tests/test_ddos_features.py](ai_engine/tests/test_ddos_features.py)
+- Feature extraction implemented (source_ip_entropy, pps, syn_ack_ratio, port_fanout, connection_failure_rate, subdomain_entropy, ngram_probability, mean_packet_size, packet_size_variance, iat_variance, fft_periodicity, outbound_inbound_ratio, volume_baseline_ratio)
+- Threat detection implemented for all six required categories (DDoS, Port Scan, DGA, JA4/TLS, C2 Beacon, Exfiltration)
+- ML layer implemented (XGBoost inference, anomaly detection / Isolation Forest, model loading, confidence generation)
+- Explainability implemented (SHAP explanations, feature contribution output)
+- Threat scoring implemented (unified threat score, severity classification)
+- Alert schema implemented and validated for downstream backend integration
+- Zeek integration implemented ([ai_engine/adapters/zeek_adapter.py](ai_engine/adapters/zeek_adapter.py), standardized Zeek event loading, scenario event loading, AI feature preparation)
+- Scenario validation implemented ([ai_engine/tests/test_scenario_pipeline.py](ai_engine/tests/test_scenario_pipeline.py), [ai_engine/tests/validate_scenarios.py](ai_engine/tests/validate_scenarios.py))
+- FP/FN analysis documented ([ai_engine/docs/fp_fn_analysis.md](ai_engine/docs/fp_fn_analysis.md))
+- Upstream data requirements documented ([UPSTREAM_REQUIREMENTS.md](UPSTREAM_REQUIREMENTS.md))
+- DGA missing-data false-positive issue was fixed (`detect_dga(None)` no longer incorrectly triggers)
+- Regression validation: All current AI/ML regression tests pass (test_pipeline, test_normal_pipeline, test_shap, test_threat_scorer, test_alert_schema, test_inference, test_zeek_adapter, test_zeek_all_available, test_dga_detector, test_scenario_pipeline, validate_scenarios)
 
 PRD alignment:
-- The PRD expects a broader detection engine beyond DDoS, so this is still partial completion
+- Matches PRD detection engine requirements, but seven-scenario validation is currently blocked by upstream data limitations (synthetic timing, missing DNS/TLS fields, limited TCP flags/bytes). These are upstream data/integration limitations, not unfinished AI modules.
 
-Progress estimate: 25% - 35%
+Progress estimate: 90% - 100% (final production-quality validation depends on Ruparna's improved telemetry)
 
 Remaining work:
-- implement the remaining threat categories
-- integrate feature extraction for all six classes
-- connect outputs to the exact alert schema defined in the PRD
-- validate with real or realistic pipeline data
+- pull and validate improved upstream data from Ruparna
+- update the adapter only if the new upstream schema requires it
+- rerun seven-scenario validation
+- measure final FP/FN and detection performance
+- participate in final end-to-end integration with Sayim
 
 ---
 
@@ -170,9 +180,9 @@ Remaining work:
 |---|---|---:|---|
 | Sayim | Trust layer + backend + dashboard | 80% - 90% | Most complete and integration-ready |
 | Ruparna | Data pipeline | 60% - 75% | Strong pipeline progress |
-| Sarbottam | AI/ML detector engine | 25% - 35% | Early but real implementation |
+| Sarbottam | AI/ML detector engine | 90% - 100% | Complete for current data, pending upstream telemetry |
 
-Overall system readiness: approximately 55% - 65%
+Overall system readiness: approximately 80% - 90%
 
 This is not final completion, because the system still needs live integration between all three layers.
 
@@ -197,21 +207,19 @@ This ordering is important because the backend and dashboard are designed to acc
 
 ### Ruparna
 Next priority:
-- ensure pipeline outputs are consistent and use-ready for the AI layer
-- validate real event structure against the PRD schema
-- finish the pipeline-to-AI compatibility layer
+- improved telemetry/data
 
 ### Sarbottam
 Next priority:
-- move beyond DDoS baseline
-- implement all remaining detection categories
-- align outputs to the expected backend schema
+- final AI validation
 
 ### Sayim
 Next priority:
-- verify the deployed contract, backend, and dashboard together in one working flow
-- confirm the mock-first architecture remains compatible with the real AI schema
-- be ready to accept real AI alerts without code refactor
+- backend/dashboard/blockchain integration
+
+### Team
+Next priority:
+- final end-to-end localhost prototype validation
 
 ---
 
@@ -234,12 +242,13 @@ Real data pipeline output should feed the AI detection engine, whose threat aler
 ### Who is ready now
 - Sayim: yes, for integration and runtime validation
 - Ruparna: yes, for final pipeline stabilization
-- Sarbottam: not yet for full integration, but the DDoS work is real progress
+- Sarbottam: yes, implementation is complete for current data and awaiting improved upstream telemetry
 
 ### Who should do what next
-- Ruparna: finish data flow quality and AI-ready format
-- Sarbottam: expand from DDoS to the full threat model set
-- Sayim: finish end-to-end validation and wiring
+- Ruparna: improved telemetry/data
+- Sarbottam: final AI validation
+- Sayim: backend/dashboard/blockchain integration
+
 
 ### Best next sequence
 Ruparna -> Sarbottam -> Sayim

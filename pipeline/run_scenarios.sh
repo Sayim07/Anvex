@@ -45,8 +45,10 @@ for SCENARIO in "${SCENARIOS[@]}"; do
     docker run --rm \
         -v "$PCAP_DIR:/pcap" \
         -v "$LOG_DIR:/logs" \
-        zeek/zeek \
-        zeek -r "/pcap/${SCENARIO}.pcap" Log::default_logdir=/logs
+	zeek/zeek \
+	zeek -r "/pcap/${SCENARIO}.pcap" \
+	Log::default_logdir=/logs \
+	/usr/local/zeek/share/zeek/site/local.zeek
 
     echo "[3/3] Parsing and normalizing..."
 
