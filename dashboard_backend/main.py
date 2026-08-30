@@ -34,12 +34,12 @@ from web3.exceptions import ContractLogicError
 # Configuration
 # ---------------------------------------------------------------------------
 
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 MOCK_MODE: bool = os.getenv("MOCK_MODE", "true").lower() == "true"
 HARDHAT_RPC_URL: str = os.getenv("HARDHAT_RPC_URL", "http://127.0.0.1:8545")
 CONTRACT_INFO_PATH: str = os.getenv(
-    "CONTRACT_INFO_PATH", "../trust_layer/deployed/contract_info.json"
+    "CONTRACT_INFO_PATH", str(Path(__file__).parent.parent / "trust_layer" / "deployed" / "contract_info.json")
 )
 CORS_ORIGINS: list[str] = os.getenv(
     "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
