@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import glob
 import time
@@ -56,10 +56,16 @@ def build_threat_evidence(threat_type: str, features: dict) -> dict:
             "beacon_interval_sec": 60.0
         }
     elif threat_type == "TLS_MALWARE":
+        # NOTE: ja4_fingerprint and ja3_hash must come from actual Zeek ssl.log
+        # fields — never fabricated.  They are included only when the upstream
+        # pipeline provides real TLS fingerprint data.
         return {
-            "ja4_fingerprint": f"t13d1516h2_{uuid.uuid4().hex[:10]}",
-            "ja3_hash": uuid.uuid4().hex[:32],
-            "packet_size_variance": features.get("packet_size_variance", 0.0)
+            "packet_size_variance": features.get("packet_size_variance", 0.0),
+            "mean_packet_size": features.get("mean_packet_size", 0.0),
+            # Real JA3/JA4 would be sourced from Zeek ssl.log via ZeekAdapter.
+            # They are not available from the live_inference feature vector.
+            "ja4_fingerprint": "UNAVAILABLE_requires_ssl_log",
+            "ja3_hash": "UNAVAILABLE_requires_ssl_log",
         }
     elif threat_type == "EXFILTRATION":
         return {

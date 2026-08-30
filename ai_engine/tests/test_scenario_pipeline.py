@@ -225,6 +225,13 @@ def run_scenario(scenario_name):
     dst_ips = [str(e.get("dst_ip", "")) for e in adapter.events if e.get("dst_ip")]
     dst_ip_str = dst_ips[0] if dst_ips else None
 
+    # Check if a specialist heuristic overrides the XGBoost label in terms of evidence
+    # (We don't override the actual ml label, just surface the heuristic's finding)
+    heuristic_override = None
+    if primary_detector["score"] >= 0.5 and primary_detector["detected"]:
+        if primary_detector["detector"] != ml_result["xgboost_prediction"]:
+            heuristic_override = primary_detector["detector"]
+
     alert = create_alert(
         threat_type=ml_result["xgboost_prediction"],
         severity=threat["severity"],
@@ -234,6 +241,7 @@ def run_scenario(scenario_name):
         explanation=shap_values,
         source_ip=src_ip_str,
         destination_ip=dst_ip_str,
+        heuristic_threat_type=heuristic_override,
     )
 
     print("\n[6] Final Alert:")

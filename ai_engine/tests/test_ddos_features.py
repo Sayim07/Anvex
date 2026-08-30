@@ -1,4 +1,4 @@
-from features.ddos_features import extract_ddos_features
+from ai_engine.features.ddos_features import extract_ddos_features
 
 
 source_ips = [

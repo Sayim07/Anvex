@@ -4,21 +4,27 @@ ZeekAdapter
 Converts standardised Zeek connection events (pipeline/scenario_output/)
 into the inputs and feature vectors required by the Anvex AI detectors.
 
-Supported event type
---------------------
-Only ``connection`` events (Zeek conn.log) are currently produced by
-Ruparna's pipeline.  DNS (dns.log) and TLS (ssl.log) events are NOT yet
-present in the scenario output.  Methods that depend on those event types
-contain a clear documented limitation rather than fabricated values.
+Supported event types
+---------------------
+- ``connection`` events (Zeek conn.log): present in all scenarios.
+- ``dns`` events (Zeek dns.log): present in the DGA scenario with field
+  ``dns_query``.  Enables subdomain_entropy / ngram_probability features.
+  Other scenarios do not have DNS events.
+- TLS fingerprints (ja3/ja4): present in the ja4_malware scenario as fields
+  on connection events.  Other scenarios do not have TLS fingerprints.
 
-Field availability notes
-------------------------
+Field availability notes (current pipeline state, 2026-08)
+-----------------------------------------------------------
 - No TCP flag counts  -> syn_ack_ratio derived from ``history`` proxy.
-- No DNS ``query``    -> subdomain_entropy / ngram_probability = 0.0 (stub).
-- No JA3/JA4 strings -> ja3 / ja4 = None (stub).
+- DNS ``dns_query``   -> present in DGA scenario events (event_type=="dns").
+                         Absent in all other scenarios -> features remain 0.0.
+- JA3/JA4 strings     -> present in ja4_malware scenario connection events.
+                         Absent in other scenarios -> ja3/ja4 = None.
 - No per-packet sizes -> mean_packet_size approximated as orig_bytes/orig_pkts;
                          packet_size_variance = 0.0 (requires packet-level data).
-- No historical volume baseline -> volume_baseline_ratio = 1.0 (dev fallback).
+- orig_bytes/resp_bytes missing in most attack scenarios (marked by
+  orig_bytes_missing=1).  Zero bytes must NOT be treated as payload evidence.
+- No historical volume baseline -> volume_baseline_ratio explicitly unavailable.
 """
 
 import json
@@ -283,35 +289,40 @@ class ZeekAdapter:
         """
         Prepare DGA feature inputs from Zeek events.
 
-        LIMITATION -- upstream data required
-        -------------------------------------
-        DGA detection requires DNS query strings (the ``query`` field from
-        Zeek dns.log).  The current standardised event schema is connection-
-        level only and does not include DNS fields.
+        DNS availability (updated 2026-08)
+        -----------------------------------
+        Ruparna's pipeline now emits ``dns`` events (event_type=="dns") in the
+        DGA scenario with the field ``dns_query`` containing the full DNS
+        query string.  This method extracts those queries and passes the most
+        representative one (longest) to the DGA feature extractor.
 
-        This method returns subdomain=None, which causes extract_dga_features
-        to produce 0.0 for both subdomain_entropy and ngram_probability.
+        For scenarios without DNS events (normal, ddos, port_scan, c2_beacon,
+        ja4_malware, exfiltration) the method returns subdomain=None, which
+        causes the DGA detector to abstain rather than produce a false result.
 
-        To unblock DGA detection, Ruparna needs to enrich the scenario output
-        with Zeek dns.log records containing at minimum:
-            { "event_type": "dns", "query": "<full_query>",
-              "subdomain": "<left_label_of_registered_domain>" }
-
-        Until that enrichment is available, DGA feature values are 0.0 and
-        DGA detector results are not meaningful.
+        Field lookup order (tolerates variations from future pipeline changes):
+            1. ``dns_query``   -- Ruparna's current field name (2026-08)
+            2. ``query``       -- alternative field name
+            3. ``subdomain``   -- legacy field name
         """
-        # Read query/subdomain if upstream ever adds it.
-        queries = [
-            event.get("query") or event.get("subdomain")
-            for event in self.events
-            if event.get("query") or event.get("subdomain")
-        ]
+        queries = []
+        for event in self.events:
+            if event.get("event_type") != "dns":
+                continue
+            # Prefer dns_query (Ruparna's field), fall back to alternatives.
+            q = (
+                event.get("dns_query")
+                or event.get("query")
+                or event.get("subdomain")
+            )
+            if q:
+                queries.append(str(q))
 
         if queries:
             # Use the longest query string as most representative.
             subdomain = max(queries, key=len)
         else:
-            # Upstream DNS field is absent from the current scenario schema.
+            # No DNS events in this scenario — DGA detector will abstain.
             subdomain = None
 
         return {
@@ -397,22 +408,43 @@ class ZeekAdapter:
     # ------------------------------------------------------------------
 
     def prepare_exfil_inputs(self):
+        """
+        Prepare exfiltration feature inputs.
+
+        Byte availability note
+        ----------------------
+        Most attack scenarios (c2, ddos, port_scan, exfil, ja4) have
+        orig_bytes_missing=1 and orig_bytes=0.  When bytes are all 0 the
+        outbound_inbound_ratio will be 0.0 and the exfil detector cannot fire.
+        This is correct behaviour — absent bytes must not generate exfil evidence.
+
+        Baseline note
+        -------------
+        No historical volume baseline is supplied by the pipeline.  We do NOT
+        set baseline_volume = current_volume (that always yields ratio=1.0 which
+        is a meaningless constant).  Instead we signal baseline as unavailable
+        so the scorer/detector can treat volume_baseline_ratio as UNAVAILABLE.
+        """
+        # Only count bytes for events where byte fields are not missing.
         outbound_bytes = sum(
             float(event.get("orig_bytes", 0) or 0)
             for event in self.events
+            if not event.get("orig_bytes_missing", 0)
         )
 
         inbound_bytes = sum(
             float(event.get("resp_bytes", 0) or 0)
             for event in self.events
+            if not event.get("resp_bytes_missing", 0)
         )
 
         current_volume = outbound_bytes + inbound_bytes
 
-        # No historical baseline is currently supplied by the standardised
-        # Zeek data.  Setting baseline = current produces ratio = 1.0.
-        # This is a development fallback only -- not production baselining.
-        baseline_volume = current_volume if current_volume > 0 else 1.0
+        # No historical baseline available — do not fabricate one.
+        # Pass None to signal unavailability to extract_exfil_features.
+        # The caller will receive volume_baseline_ratio = 0.0 (formula:
+        # current/None -> 0.0 via the safe guard in extract_exfil_features).
+        baseline_volume = None
 
         return {
             "outbound_bytes": outbound_bytes,
@@ -442,16 +474,21 @@ class ZeekAdapter:
           source_ip_entropy, pps, port_fanout,
           connection_failure_rate, iat_variance, fft_periodicity
 
+        AVAILABLE IN SPECIFIC SCENARIOS:
+          subdomain_entropy   -- available in DGA scenario (dns_query field present)
+          ngram_probability   -- available in DGA scenario (dns_query field present)
+          ja3 / ja4           -- available in ja4_malware scenario (connection events)
+          subdomain_entropy / ngram_probability = 0.0 for all non-DGA scenarios
+
         PARTIAL (approximated or degenerate for zero-byte events):
           syn_ack_ratio       -- history-field proxy, not exact flag counts
           mean_packet_size    -- orig_bytes/orig_pkts approx; 0 if bytes=0
           packet_size_variance-- approximated; underestimated; 0 if bytes=0
-          outbound_inbound_ratio -- 0.0 when orig_bytes=resp_bytes=0
-          volume_baseline_ratio  -- always 1.0 (no historical baseline)
+          outbound_inbound_ratio -- 0.0 when orig_bytes=resp_bytes=0 (most attacks)
 
-        UNAVAILABLE (upstream fields absent from current scenario schema):
-          subdomain_entropy   -- requires dns.log query field (0.0 fallback)
-          ngram_probability   -- requires dns.log query field (0.0 fallback)
+        UNAVAILABLE (absent from upstream data):
+          volume_baseline_ratio  -- no historical baseline; marked unavailable
+                                    (returned as None, not 1.0)
 
         Returns
         -------

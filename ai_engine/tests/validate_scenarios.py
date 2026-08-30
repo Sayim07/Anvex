@@ -81,21 +81,25 @@ FEATURE_SIGNAL_BY_SCENARIO = {
         "note": "101 unique dst_ports -> port_fanout=101. All bytes=0. 1 src_ip -> entropy=0.",
     },
     "dga": {
-        "has_signal": ["connection_failure_rate", "iat_variance", "fft_periodicity"],
-        "degraded_to_zero": ["source_ip_entropy", "subdomain_entropy",
-                              "ngram_probability", "mean_packet_size",
+        "has_signal": ["connection_failure_rate", "iat_variance", "fft_periodicity",
+                       "subdomain_entropy", "ngram_probability"],
+        "degraded_to_zero": ["source_ip_entropy",
+                              "mean_packet_size",
                               "packet_size_variance", "outbound_inbound_ratio"],
-        "note": "CRITICAL: no dns.log query field. DGA features are structurally 0.0. "
-                "DGA cannot be detected without upstream dns.log enrichment.",
+        "note": "DNS events WITH dns_query field now present (Ruparna 2026-08). "
+                "subdomain_entropy and ngram_probability now computed. "
+                "DGA heuristic detector can now evaluate real domain strings.",
     },
     "ja4_malware": {
-        "has_signal": ["connection_failure_rate", "iat_variance"],
+        "has_signal": ["connection_failure_rate", "iat_variance",
+                       "ja3_pattern", "ja4_pattern"],
         "degraded_to_zero": ["source_ip_entropy", "subdomain_entropy",
                               "ngram_probability", "mean_packet_size",
                               "packet_size_variance", "outbound_inbound_ratio",
                               "fft_periodicity"],
-        "note": "CRITICAL: no ssl.log ja3/ja4 field. Only 4 events. "
-                "JA4 cannot be detected without upstream ssl.log enrichment.",
+        "note": "JA3/JA4 fingerprint fields now present in connection events "
+                "(Ruparna 2026-08). JA4 detector can now fingerprint-match. "
+                "Bytes still 0 (orig_bytes_missing=1). 20 events.",
     },
     "c2_beacon": {
         "has_signal": ["connection_failure_rate", "iat_variance", "fft_periodicity"],
@@ -229,35 +233,31 @@ def validate():
                 "of real normal traffic timing."
             ),
         },
-        "dga -> c2_beacon (miss)": {
-            "type": "FALSE NEGATIVE",
+        "dga -> (miss or detected)": {
+            "type": "UPDATED — dns_query field now available",
             "scenario": "dga",
             "root_cause": (
-                "DGA features (subdomain_entropy, ngram_probability) are both "
-                "0.0 because dns.log query fields are absent from the pipeline. "
-                "With all DGA-distinguishing features at 0.0, the model has no "
-                "information to distinguish dga from any other scenario with "
-                "similar connection-level patterns."
+                "Ruparna's pipeline (2026-08) added real dns events with dns_query field. "
+                "ZeekAdapter.prepare_dga_inputs() was reading wrong field names ('query'/'subdomain'). "
+                "After the fix, 24 real DNS queries are extracted and DGA features are computed. "
+                "The heuristic detector can now evaluate real DGA domain strings."
             ),
             "fix": (
-                "Ruparna must add Zeek dns.log events to the scenario output "
-                "with the query field populated. This is a pipeline gap, "
-                "not an AI model bug."
+                "Fixed ZeekAdapter.prepare_dga_inputs() to read 'dns_query' field. "
+                "DGA detector now evaluates real entropy/ngram statistics from actual domain names."
             ),
         },
-        "ja4_malware -> c2_beacon (miss)": {
-            "type": "FALSE NEGATIVE",
+        "ja4_malware -> (detected by fingerprint)": {
+            "type": "UPDATED — ja3/ja4 fields now present",
             "scenario": "ja4_malware",
             "root_cause": (
-                "JA4 fingerprints (ja4, ja3) are absent from the pipeline. "
-                "Packet size features are 0.0 (all bytes=0). Only 4 events "
-                "so IAT is near-meaningless. The model has no JA4-specific "
-                "information and defaults to the nearest match."
+                "Ruparna's pipeline added ja3/ja4 fields to ja4_malware connection events. "
+                "Previous JA4 detector only checked packet_size_variance/mean_packet_size. "
+                "After the fix, fingerprint-based matching is used."
             ),
             "fix": (
-                "Ruparna must add Zeek ssl.log events to the scenario output "
-                "with ja3/ja4 fingerprints and non-zero byte counts. "
-                "This is a pipeline gap, not an AI model bug."
+                "Fixed JA4 detector to score on fingerprint pattern matching. "
+                "JA4 fingerprint match scores 0.5, JA3 match scores 0.3 — detectable now."
             ),
         },
         "exfiltration -> c2_beacon (miss)": {
