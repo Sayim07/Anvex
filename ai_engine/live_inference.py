@@ -107,8 +107,16 @@ def process_and_emit(pcap_path: str, endpoint: str) -> bool:
         "confidence": round(confidence, 4),
         "severity": severity,
         "evidence": build_threat_evidence(threat_class, features),
-        "detector": "anvex-ai-engine"
+        "detector": "anvex-ai-engine",
+        "features": features,
+        "confidence_type": "xgboost_softmax_probability"
     }
+
+    if "explanation" in pred_res:
+        alert_payload["explanation"] = pred_res["explanation"]
+
+    if "heuristic_threat_type" in pred_res:
+        alert_payload["heuristic_threat_type"] = pred_res["heuristic_threat_type"]
     
     # Transmit via HTTP POST to FastAPI Backend
     try:

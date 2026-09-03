@@ -31,7 +31,7 @@ def run_ai_pipeline(
     # SHAP explanation
     # -------------------------
 
-    explanation = explain_prediction(features)
+    explanation = ml_result.get("explanation", {})
 
     # -------------------------
     # Unified threat score
@@ -54,7 +54,7 @@ def run_ai_pipeline(
         threat_score=threat_assessment["threat_score"],
         confidence=ml_result["xgboost_confidence"],
         features=features,
-        explanation=explanation["shap_values"],
+        explanation=explanation,
         source_ip=source_ip,
         destination_ip=destination_ip,
     )

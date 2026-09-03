@@ -198,8 +198,8 @@ def run_scenario(scenario_name):
     # Step 4: SHAP explanation
     # ------------------------------------------------------------------
     print("\n[4] SHAP Explanation (top 5 contributors):")
-    explanation = explain_prediction(features)
-    shap_values = explanation["shap_values"]
+    
+    shap_values = ml_result.get("explanation", {})
     sorted_shap = sorted(shap_values.items(), key=lambda x: abs(x[1]), reverse=True)
     for feat_name, shap_val in sorted_shap[:5]:
         print(f"    {feat_name:35s}: {shap_val:+.6f}")

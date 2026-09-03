@@ -62,9 +62,13 @@ def predict(features):
         isolation_model.decision_function(X)[0]
     )
 
+    from ai_engine.explainability.shap_explainer import explain_prediction
+    explanation = explain_prediction(features)["shap_values"]
+
     return {
         "xgboost_prediction": predicted_label,
         "xgboost_confidence": xgb_confidence,
         "anomaly_prediction": anomaly_prediction,
         "anomaly_score": anomaly_score,
+        "explanation": explanation,
     }
