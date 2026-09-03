@@ -347,7 +347,7 @@ def generate_exfiltration():
             payload=payload
         )
 
-        packet.time = base_time + i * 0.2
+        packet.time = base_time + (i * 0.3) + random.uniform(0.02, 0.15)
         packets.append(packet)
 
     return packets

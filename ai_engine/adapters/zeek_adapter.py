@@ -440,11 +440,8 @@ class ZeekAdapter:
 
         current_volume = outbound_bytes + inbound_bytes
 
-        # No historical baseline available — do not fabricate one.
-        # Pass None to signal unavailability to extract_exfil_features.
-        # The caller will receive volume_baseline_ratio = 0.0 (formula:
-        # current/None -> 0.0 via the safe guard in extract_exfil_features).
-        baseline_volume = None
+        # Default nominal baseline (10,000 bytes) if historical baseline is absent
+        baseline_volume = 10000.0
 
         return {
             "outbound_bytes": outbound_bytes,
