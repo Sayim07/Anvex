@@ -231,6 +231,7 @@ metrics_hub = ConnectionManager()
 # Stores event timestamps for the last 10 seconds
 _event_timestamps: collections.deque[float] = collections.deque(maxlen=1000)
 _pipeline_latencies: collections.deque[float] = collections.deque(maxlen=50)
+_recent_alerts: collections.deque[dict] = collections.deque(maxlen=50)
 
 
 def _record_event(latency_ms: float | None = None) -> None:
@@ -387,6 +388,7 @@ async def _process_and_broadcast(alert: dict) -> None:
     }
 
     _record_event(latency_ms)
+    _recent_alerts.append(enriched)
     await alerts_hub.broadcast(enriched)
 
 
@@ -445,6 +447,13 @@ async def ingest_alert(payload: AlertPayload) -> dict:
     return {"status": "accepted", "alert_id": payload.alert_id}
 
 
+@app.post("/api/alerts/clear", summary="Clear recent alert buffer")
+async def clear_alerts() -> dict:
+    """Clears in-memory recent alert buffer so dashboard returns to clean armed state."""
+    _recent_alerts.clear()
+    return {"status": "cleared"}
+
+
 @app.get("/api/verify/{alert_id}", summary="Verify an alert on-chain")
 async def verify_alert(alert_id: str) -> dict:
     """
@@ -490,6 +499,12 @@ async def health() -> dict:
 async def ws_alerts(ws: WebSocket) -> None:
     """Live threat alert feed for the SOC dashboard."""
     await alerts_hub.connect(ws)
+    # Replay recent alerts so fresh browser tabs or page refreshes don't start blank
+    for past_alert in list(_recent_alerts):
+        try:
+            await ws.send_text(json.dumps(past_alert, default=str))
+        except Exception:
+            break
     try:
         while True:
             await ws.receive_text()  # Keep connection alive; client may send pings

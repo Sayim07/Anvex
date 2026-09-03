@@ -110,49 +110,120 @@ Anvex passively identifies **6 critical cyber threat classes** using mathematica
 
 ---
 
-## 🚀 Quickstart & Setup Guide
+## 🚀 System Startup & Live Demonstration Runbook
 
-### 1. Clone & Install Dependencies
+To run and demonstrate the entire platform in **Real-Time Production Mode (Zero Mock Data)**, follow the 4-terminal sequence below:
 
-```bash
-# Clone the repository
-git clone https://github.com/Sayim07/Anvex.git
-cd Anvex
-
-# Install Python AI & Backend Dependencies
-pip install -r dashboard_backend/requirements.txt
-pip install xgboost scikit-learn scapy shap joblib
-
-# Install Trust Layer & Frontend Dependencies
-cd trust_layer && npm install
-cd ../soc_frontend && npm install
-cd ..
+```
+┌───────────────────────────┐    ┌───────────────────────────┐    ┌───────────────────────────┐
+│        TERMINAL 1         │    │        TERMINAL 2         │    │        TERMINAL 3         │
+│   EVM Blockchain Node     │    │   Smart Contract + API    │    │    Mission-Control SOC    │
+│  http://127.0.0.1:8545    │    │   http://localhost:8000   │    │   http://localhost:5173   │
+└─────────────┬─────────────┘    └─────────────┬─────────────┘    └─────────────┬─────────────┘
+              │                                │                                │
+              └────────────────────────┬───────┴────────────────────────────────┘
+                                       │ 
+                        ┌──────────────┴──────────────┐
+                        │         TERMINAL 4          │
+                        │   Live AI Attack Replay     │
+                        │    (Your Demo Controller)   │
+                        └─────────────────────────────┘
 ```
 
 ---
 
-### 2. Start the Complete Stack
+### 🖥️ Terminal 1: The Trust Layer (Blockchain Node)
+*Runs your local Ethereum proof ledger in the background.*
 
-Open separate terminal windows or use PM2:
-
-```bash
-# Terminal 1: Start Blockchain Node & Deploy Contract
-cd trust_layer
+```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex\trust_layer
 npx hardhat node
-# In a new tab: npm run deploy
+```
+* **What it does:** Starts an isolated Ethereum blockchain JSON-RPC node on `http://127.0.0.1:8545`. It pre-funds 20 test accounts with 10,000 ETH each to notarize cryptographic threat hashes.
+* **Status:** Leave running in the background.
 
-# Terminal 2: Start FastAPI Backend (Production Mode)
-cd dashboard_backend
+---
+
+### ⚙️ Terminal 2: The Core Backend (Deploy Contract + FastAPI)
+*Deploys the smart contract and boots the real-time ingestion server.*
+
+```powershell
+# Step A: Deploy the ForensicAuditLedger contract to the running blockchain
+cd c:\Users\sayim\OneDrive\Documents\Avnex\trust_layer
+npm run deploy
+
+# Step B: Launch the FastAPI production server
+cd c:\Users\sayim\OneDrive\Documents\Avnex\dashboard_backend
 uvicorn main:app --reload --port 8000
+```
+* **What it does:**
+  * `npm run deploy`: Compiles `ForensicAuditLedger.sol`, deploys it to Hardhat, and writes the address to `deployed/contract_info.json`.
+  * `uvicorn main:app`: Boots the async Python backend at `http://localhost:8000`, establishes Web3 connection to the contract, and streams live system resource metrics (`/ws/system-metrics`) and threat feeds (`/ws/alerts`).
+* **Status:** Leave running in the background.
 
-# Terminal 3: Launch React SOC Dashboard
-cd soc_frontend
+---
+
+### 🎨 Terminal 3: The SOC Dashboard (React UI)
+*Hosts the mission-control Security Operations Center dashboard.*
+
+```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex\soc_frontend
 npm run dev
-# Dashboard is live at: http://localhost:5173
+```
+* **What it does:** Starts Vite dev server and opens the dashboard at **`http://localhost:5173`**. Connects via WebSockets and awaits incoming threats with status **`🟢 System Armed — No Threats Detected`**.
+* **Status:** Leave running in the background. Open `http://localhost:5173` in your browser.
 
-# Terminal 4: Run Real-Time AI Inference Loop
+---
+
+### 🧠 Terminal 4: The Live AI Attacker & Test Catalog (Your Controller)
+*Use this terminal as your live controller to trigger real attacks against the network:*
+
+#### 🎯 Option A: The "Hands-Free" Continuous Demonstration Loop (Recommended)
+```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex
 python ai_engine/live_inference.py --loop --interval 3.5
 ```
+* **What it does:** Continuously cycles through all network attack PCAPs every 3.5s, parses raw Scapy packet flows, computes XGBoost + Isolation Forest inferences, calculates SHAP feature attributions, notarizes hashes on-chain, and streams them into the UI.
+
+---
+
+#### 🎯 Option B: Targeted Individual Attack Testing
+You can trigger any specific cyber threat vector on demand:
+
+| Attack Vector | Terminal 4 Command | Detection Mechanism & Indicators |
+| :--- | :--- | :--- |
+| **Volumetric DDoS** | `python ai_engine/live_inference.py --pcap pcaps/ddos.pcap` | High packet rate (`pps`), asymmetric SYN/ACK ratio, high IP entropy. Triggers **`CRITICAL DDOS`** (~95.8% confidence). |
+| **Stealthy C2 Beacon** | `python ai_engine/live_inference.py --pcap pcaps/c2_beacon.pcap` | High FFT periodicity score, microsecond inter-arrival variance. Triggers **`CRITICAL C2_BEACON`**. |
+| **Port Reconnaissance** | `python ai_engine/live_inference.py --pcap pcaps/port_scan.pcap` | Massive destination port fanout (>100 ports) with high failure rate. Triggers **`HIGH PORT_SCAN`**. |
+| **Data Exfiltration** | `python ai_engine/live_inference.py --pcap pcaps/exfiltration.pcap` | Heavy outbound payload volume deviation. Triggers **`CRITICAL EXFILTRATION`**. |
+| **Encrypted TLS Malware** | `python ai_engine/live_inference.py --pcap pcaps/ja4_malware.pcap` | JA4 fingerprint match and packet size variance anomalies without SSL decryption. Triggers **`HIGH JA4_MALWARE`**. |
+| **DGA Domain Fast-Flux** | `python ai_engine/live_inference.py --pcap pcaps/dga.pcap` | High Shannon entropy in DNS query strings + low n-gram probability. Triggers **`HIGH DGA`**. |
+| **Normal Benign Traffic** | `python ai_engine/live_inference.py --pcap pcaps/normal.pcap` | Balanced HTTP client browsing timing. Correctly classified as **`NORMAL`** (Zero False Positives). |
+
+---
+
+### ⚡ Quick-Launch Alternative: Single-Command PM2 Daemon
+If you prefer not to manage multiple terminal tabs, launch Terminals 1, 2, and 3 simultaneously with PM2:
+
+```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex
+pm2 start ecosystem.config.js
+```
+* Automatically spawns `anvex-blockchain`, `anvex-backend`, and `anvex-frontend` in background daemons.
+* Manage with `pm2 status`, `pm2 logs`, or `pm2 stop all`.
+
+---
+
+### 🏆 4-Step Presentation Walkthrough for Judges
+
+1. **Clean Slate Start:**
+   Open `http://localhost:5173`. Click **`🧹 Clear`** in the Live Threat Feed header so the judges see **`0 Threats / System Armed`**.
+2. **Execute Live Strike:**
+   In Terminal 4, run `python ai_engine/live_inference.py --pcap pcaps/ddos.pcap`. Within 2 seconds, the critical alert slides in at the top of the feed with glowing red badges.
+3. **Show Mathematical Explainability (SHAP):**
+   Click the alert row to expand the **Evidence Drawer**. Point out the **`🧠 AI Explainability (SHAP Values)`** panel showing feature contribution weights (e.g., `ngram_probability`, `pps`, `outbound_inbound_ratio`).
+4. **Prove Legal Non-Repudiation (On-Chain Verification):**
+   Click **`⛓ Verify On-Chain`**. The system queries the Ethereum contract at runtime and renders the green **`CRYPTOGRAPHICALLY VERIFIED`** seal with block height and timestamp proof.
 
 ---
 

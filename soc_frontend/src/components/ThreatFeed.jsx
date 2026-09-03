@@ -203,6 +203,20 @@ export default function ThreatFeed({ onVerifyRequest }) {
           )}
         </button>
 
+        {alerts.length > 0 && (
+          <button
+            className="pause-btn"
+            style={{ marginLeft: '4px', borderColor: 'rgba(255,255,255,0.15)', color: '#94a3b8' }}
+            onClick={() => {
+              setAlerts([]);
+              fetch('/api/alerts/clear', { method: 'POST' }).catch(() => {});
+            }}
+            title="Reset feed back to System Armed (0 threats)"
+          >
+            🧹 Clear
+          </button>
+        )}
+
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span
             className={`status-dot ${wsStatus === 'connected' ? 'connected' : wsStatus === 'connecting' ? 'connecting' : 'disconnected'}`}
