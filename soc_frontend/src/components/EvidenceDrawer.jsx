@@ -165,6 +165,29 @@ export default function EvidenceDrawer({ alert, onVerify }) {
             </tbody>
           </table>
         </div>
+
+        {/* AI SHAP Feature Attribution */}
+        {alert.explanation && Object.keys(alert.explanation).length > 0 && (
+          <div style={{ minWidth: '220px', flex: 1 }}>
+            <div style={{ fontSize: '0.6rem', color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+              🧠 AI Explainability (SHAP Values)
+            </div>
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <tbody>
+                {Object.entries(alert.explanation).slice(0, 5).map(([feat, score]) => (
+                  <tr key={feat}>
+                    <td style={{ color: '#e9d5ff', paddingRight: '12px', paddingBottom: '4px', fontSize: '0.75rem' }}>
+                      {feat}
+                    </td>
+                    <td style={{ color: '#38bdf8', paddingBottom: '4px', fontSize: '0.75rem', fontWeight: 600, textAlign: 'right' }}>
+                      {typeof score === 'number' ? score.toFixed(4) : score}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

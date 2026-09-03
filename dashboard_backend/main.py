@@ -423,6 +423,10 @@ class AlertPayload(BaseModel):
     severity: str = Field(..., description="CRITICAL | HIGH | MEDIUM | LOW")
     evidence: dict = Field(default_factory=dict)
     detector: str = Field(default="anvex-ai-engine")
+    features: dict = Field(default_factory=dict)
+    explanation: dict = Field(default_factory=dict)
+    confidence_type: str | None = Field(default=None)
+    heuristic_threat_type: str | None = Field(default=None)
 
 
 # ---------------------------------------------------------------------------

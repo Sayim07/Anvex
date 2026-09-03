@@ -124,13 +124,18 @@ export default function ThreatFeed({ onVerifyRequest }) {
 
   const handleMessage = useCallback((data) => {
     if (pausedRef.current) {
-      // Buffer incoming alerts while paused
-      pendingBufferRef.current.push(data);
-      // Force a re-render to update the pending count badge
+      // Buffer incoming alerts while paused (avoid duplicate alert_id)
+      if (!data.alert_id || !pendingBufferRef.current.some((a) => a.alert_id === data.alert_id)) {
+        pendingBufferRef.current.push(data);
+      }
       setPaused(true);
     } else {
-      alertCountRef.current += 1;
       setAlerts((prev) => {
+        // Avoid duplicate alert_id from rapid bursts
+        if (data.alert_id && prev.some((a) => a.alert_id === data.alert_id)) {
+          return prev;
+        }
+        alertCountRef.current += 1;
         const next = [{ ...data, _key: alertCountRef.current }, ...prev];
         return next.slice(0, MAX_ALERTS);
       });
