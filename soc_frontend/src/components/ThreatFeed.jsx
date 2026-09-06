@@ -1,112 +1,142 @@
-// ThreatFeed.jsx — Live real-time alert table
 import { useState, useCallback, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useWebSocket } from '../hooks/useWebSocket';
 import EvidenceDrawer from './EvidenceDrawer';
+import ThreatSkeleton from './ThreatSkeleton';
+import DecryptText from './DecryptText';
+import {
+  Play,
+  Pause,
+  Trash2,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+  Radio,
+} from 'lucide-react';
 
 const MAX_ALERTS = 200;
 
 function ThreatClassBadge({ cls }) {
-  const colors = {
-    DDOS:         { bg: '#7f1d1d', color: '#fca5a5', border: '#dc2626' },
-    PORT_SCAN:    { bg: '#1e3a5f', color: '#93c5fd', border: '#3b82f6' },
-    DGA_DOMAIN:   { bg: '#312e81', color: '#c4b5fd', border: '#7c3aed' },
-    C2_BEACON:    { bg: '#4c1d95', color: '#ddd6fe', border: '#8b5cf6' },
-    TLS_MALWARE:  { bg: '#1c1917', color: '#d6d3d1', border: '#78716c' },
-    EXFILTRATION: { bg: '#422006', color: '#fde68a', border: '#d97706' },
+  const styles = {
+    DDOS:         'bg-rose-950/70 border-rose-500/60 text-rose-300',
+    PORT_SCAN:    'bg-sky-950/70 border-sky-500/60 text-sky-300',
+    DGA_DOMAIN:   'bg-purple-950/70 border-purple-500/60 text-purple-300',
+    C2_BEACON:    'bg-violet-950/70 border-violet-500/60 text-violet-300',
+    TLS_MALWARE:  'bg-stone-900 border-stone-600 text-stone-300',
+    EXFILTRATION: 'bg-amber-950/70 border-amber-500/60 text-amber-300',
   };
-  const s = colors[cls] || { bg: '#1f2937', color: '#9ca3af', border: '#374151' };
+  const clsStyle = styles[cls] || 'bg-slate-900 border-slate-700 text-slate-300';
+
   return (
-    <span style={{
-      background: s.bg,
-      border: `1px solid ${s.border}`,
-      color: s.color,
-      borderRadius: '4px',
-      padding: '2px 7px',
-      fontSize: '0.68rem',
-      fontWeight: 600,
-      letterSpacing: '0.04em',
-      whiteSpace: 'nowrap',
-    }}>
+    <span className={`px-2.5 py-0.5 rounded text-[11px] font-mono font-bold tracking-wide border whitespace-nowrap ${clsStyle}`}>
       {cls}
     </span>
   );
 }
 
-function AlertRow({ alert, isExpanded, onToggle, onVerify }) {
+function AlertRow({ alert, isExpanded, onToggle, onVerify, isRecent }) {
   const severity = alert.severity?.toUpperCase();
   const isCritical = severity === 'CRITICAL';
+  const isHigh = severity === 'HIGH';
   const localTime = new Date(alert.timestamp).toLocaleTimeString();
 
   return (
     <>
       <tr
-        className={`alert-row ${isCritical ? 'critical' : 'high'} animate-slide-in`}
         onClick={onToggle}
-        title="Click to expand evidence"
+        className={`cyber-table-row ${isCritical ? 'critical' : isHigh ? 'high' : ''} ${
+          isExpanded ? 'active-row' : ''
+        }`}
+        title="Click to view full forensic telemetry and SHAP explanations"
       >
         {/* Time */}
-        <td style={{ padding: '10px 12px', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+        <td className="p-3 text-xs font-mono text-slate-400 whitespace-nowrap">
           {localTime}
         </td>
 
-        {/* Source → Dest */}
-        <td style={{ padding: '10px 12px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-          <span style={{ color: '#7dd3fc' }}>{alert.source_ip}</span>
-          <span style={{ color: 'var(--text-dim)', margin: '0 6px' }}>→</span>
-          <span style={{ color: '#c4b5fd' }}>{alert.destination_ip}</span>
+        {/* Source -> Dest */}
+        <td className="p-3 text-xs font-mono whitespace-nowrap">
+          <span className="text-cyan-300 font-semibold">
+            {isRecent && isCritical ? (
+              <DecryptText text={alert.source_ip} speed={18} />
+            ) : (
+              alert.source_ip
+            )}
+          </span>
+          <span className="text-slate-500 mx-2">→</span>
+          <span className="text-purple-300 font-semibold">
+            {isRecent && isCritical ? (
+              <DecryptText text={alert.destination_ip} speed={22} />
+            ) : (
+              alert.destination_ip
+            )}
+          </span>
         </td>
 
         {/* Threat Class */}
-        <td style={{ padding: '10px 12px' }}>
+        <td className="p-3">
           <ThreatClassBadge cls={alert.threat_class} />
         </td>
 
         {/* Severity */}
-        <td style={{ padding: '10px 12px' }}>
-          <span className={isCritical ? 'badge-critical' : 'badge-high'}>
+        <td className="p-3">
+          <span
+            className={
+              isCritical
+                ? 'badge-critical pulse-critical'
+                : isHigh
+                ? 'badge-high pulse-high'
+                : 'badge-high'
+            }
+          >
             {severity}
           </span>
         </td>
 
         {/* Confidence */}
-        <td style={{ padding: '10px 12px' }}>
+        <td className="p-3">
           <span className="badge-confidence">
-            {(alert.confidence * 100).toFixed(2)}%
+            {(alert.confidence * 100).toFixed(1)}%
           </span>
         </td>
 
         {/* Tx Hash */}
-        <td style={{ padding: '10px 12px' }}>
+        <td className="p-3">
           {alert.tx_hash ? (
             <span className="badge-tx" title={alert.tx_hash}>
               ⛓ {alert.tx_hash.slice(0, 10)}…
             </span>
           ) : (
-            <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}>pending</span>
+            <span className="text-[11px] font-mono text-slate-500">pending</span>
           )}
         </td>
 
-        {/* Verify button */}
-        <td style={{ padding: '10px 8px' }} onClick={(e) => e.stopPropagation()}>
+        {/* Verify Quick Action */}
+        <td className="p-3" onClick={(e) => e.stopPropagation()}>
           <button
-            className="verify-link-btn"
-            title="Send this alert_id to the Blockchain Verifier"
-            onClick={(e) => { e.stopPropagation(); onVerify(alert.alert_id); }}
+            onClick={() => onVerify(alert.alert_id)}
+            className="cyber-btn cyber-btn-verify text-[11px] py-1 px-2.5 cursor-pointer"
+            title="Send alert_id directly to Blockchain Verifier"
           >
-            ⛓ Verify
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            Verify
           </button>
         </td>
 
-        {/* Expand toggle */}
-        <td style={{ padding: '10px 12px', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
-          {isExpanded ? '▲' : '▼'}
+        {/* Expand Arrow */}
+        <td className="p-3 text-slate-500 text-xs">
+          {isExpanded ? <ChevronUp className="w-4 h-4 text-cyan-400" /> : <ChevronDown className="w-4 h-4" />}
         </td>
       </tr>
 
+      {/* Expandable Drawer inside AnimatePresence */}
       {isExpanded && (
         <tr>
-          <td colSpan={8} style={{ padding: 0 }}>
-            <EvidenceDrawer alert={alert} onVerify={onVerify} />
+          <td colSpan={8} className="p-0 border-b border-sky-500/20">
+            <AnimatePresence>
+              <EvidenceDrawer alert={alert} onVerify={onVerify} />
+            </AnimatePresence>
           </td>
         </tr>
       )}
@@ -118,25 +148,26 @@ export default function ThreatFeed({ onVerifyRequest }) {
   const [alerts, setAlerts] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [paused, setPaused] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const alertCountRef = useRef(0);
   const pendingBufferRef = useRef([]);
   const pausedRef = useRef(false);
 
   const handleMessage = useCallback((data) => {
     if (pausedRef.current) {
-      // Buffer incoming alerts while paused (avoid duplicate alert_id)
       if (!data.alert_id || !pendingBufferRef.current.some((a) => a.alert_id === data.alert_id)) {
         pendingBufferRef.current.push(data);
+        setPendingCount(pendingBufferRef.current.length);
       }
       setPaused(true);
     } else {
       setAlerts((prev) => {
-        // Avoid duplicate alert_id from rapid bursts
         if (data.alert_id && prev.some((a) => a.alert_id === data.alert_id)) {
           return prev;
         }
         alertCountRef.current += 1;
-        const next = [{ ...data, _key: alertCountRef.current }, ...prev];
+        const next = [{ ...data, _key: alertCountRef.current, _isNew: true }, ...prev];
         return next.slice(0, MAX_ALERTS);
       });
     }
@@ -151,11 +182,10 @@ export default function ThreatFeed({ onVerifyRequest }) {
     pausedRef.current = willPause;
 
     if (!willPause) {
-      // Resuming — flush buffered alerts (newest first, prepended to existing list)
       const buffered = pendingBufferRef.current.splice(0);
+      setPendingCount(0);
       if (buffered.length > 0) {
         setAlerts((prev) => {
-          // buffered is oldest-first (push order), so reverse a copy for newest-first display
           const newAlerts = [...buffered].reverse().map((d) => {
             alertCountRef.current += 1;
             return { ...d, _key: alertCountRef.current };
@@ -167,128 +197,132 @@ export default function ThreatFeed({ onVerifyRequest }) {
     setPaused(willPause);
   };
 
-  const pendingCount = pendingBufferRef.current.length;
+  const filteredAlerts = alerts.filter((a) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      a.source_ip?.toLowerCase().includes(q) ||
+      a.destination_ip?.toLowerCase().includes(q) ||
+      a.threat_class?.toLowerCase().includes(q) ||
+      a.severity?.toLowerCase().includes(q) ||
+      a.alert_id?.toLowerCase().includes(q)
+    );
+  });
 
   return (
-    <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Panel header */}
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef4444' }} />
-        <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
-          Live Threat Feed
-        </span>
-        <span style={{
-          marginLeft: '6px',
-          background: 'rgba(239,68,68,0.15)',
-          border: '1px solid rgba(239,68,68,0.4)',
-          color: '#fca5a5',
-          borderRadius: '12px',
-          padding: '1px 8px',
-          fontSize: '0.65rem',
-          fontWeight: 600,
-        }}>
-          {alerts.length}
-        </span>
-
-        {/* Pause / Resume button */}
-        <button
-          className={`pause-btn ${paused ? 'paused' : ''}`}
-          onClick={togglePause}
-          title={paused ? 'Resume live stream' : 'Pause live stream'}
-        >
-          {paused ? (
-            <>▶ Resume {pendingCount > 0 && <span className="pending-badge">+{pendingCount}</span>}</>
-          ) : (
-            '⏸ Pause'
-          )}
-        </button>
-
-        {alerts.length > 0 && (
-          <button
-            className="pause-btn"
-            style={{ marginLeft: '4px', borderColor: 'rgba(255,255,255,0.15)', color: '#94a3b8' }}
-            onClick={() => {
-              setAlerts([]);
-              fetch('/api/alerts/clear', { method: 'POST' }).catch(() => {});
-            }}
-            title="Reset feed back to System Armed (0 threats)"
-          >
-            🧹 Clear
-          </button>
-        )}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span
-            className={`status-dot ${wsStatus === 'connected' ? 'connected' : wsStatus === 'connecting' ? 'connecting' : 'disconnected'}`}
-          />
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-            {paused ? 'Paused' : wsStatus === 'connected' ? 'Streaming' : wsStatus === 'connecting' ? 'Connecting…' : 'Offline'}
+    <div className="glass-panel flex-1 flex flex-col overflow-hidden border border-sky-500/20">
+      {/* Panel Top Action Bar */}
+      <div className="p-3.5 border-b border-sky-500/15 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="relative flex">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_#ef4444]" />
+            <span className="absolute -inset-0.5 rounded-full bg-rose-500 animate-ping opacity-75" />
+          </div>
+          <span className="text-xs font-mono font-bold tracking-wider text-slate-100 uppercase">
+            Live Threat Stream
           </span>
+          <span className="text-xs font-mono bg-rose-500/15 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold">
+            {alerts.length} DETECTIONS
+          </span>
+        </div>
+
+        {/* Search Filter Bar */}
+        <div className="relative flex-1 max-w-xs">
+          <input
+            type="text"
+            placeholder="Filter IP, class, severity..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="cyber-input text-xs py-1.5 pl-8 pr-3 bg-slate-900/60 border-slate-700 focus:border-cyan-400"
+          />
+          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+        </div>
+
+        {/* Stream Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={togglePause}
+            className={`cyber-btn text-xs py-1.5 px-3 border cursor-pointer ${
+              paused
+                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 hover:bg-amber-500/30'
+                : 'bg-sky-500/15 border-sky-500/35 text-sky-300 hover:bg-sky-500/25'
+            }`}
+            title={paused ? 'Resume live feed' : 'Pause live feed'}
+          >
+            {paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+            {paused ? (
+              <span>Resume {pendingCount > 0 && `(+${pendingCount})`}</span>
+            ) : (
+              <span>Pause</span>
+            )}
+          </button>
+
+          {alerts.length > 0 && (
+            <button
+              onClick={() => {
+                setAlerts([]);
+                fetch('/api/alerts/clear', { method: 'POST' }).catch(() => {});
+              }}
+              className="cyber-btn bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs py-1.5 px-2.5 cursor-pointer"
+              title="Reset feed back to System Armed"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-700">
+            <Radio className={`w-3.5 h-3.5 ${wsStatus === 'connected' ? 'text-emerald-400 animate-pulse' : 'text-slate-500'}`} />
+            <span className="text-[11px] font-mono text-slate-400">
+              {paused ? 'PAUSED' : wsStatus === 'connected' ? 'STREAMING' : 'OFFLINE'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{ overflow: 'auto', flex: 1 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {/* Table Container */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full border-collapse text-left">
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Time', 'Source → Destination', 'Threat', 'Severity', 'Confidence', 'On-Chain TX', '', ''].map((h, i) => (
-                <th key={i} style={{
-                  padding: '8px 12px',
-                  fontSize: '0.6rem',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: 'var(--text-dim)',
-                  textAlign: 'left',
-                  position: 'sticky',
-                  top: 0,
-                  background: 'var(--bg-panel)',
-                  zIndex: 1,
-                }}>
-                  {h}
+            <tr className="border-b border-sky-500/20 bg-slate-950/60 sticky top-0 z-10 backdrop-blur-md">
+              {['Timestamp', 'Source → Destination', 'Threat Category', 'Severity', 'Confidence', 'Blockchain Hash', 'Action', ''].map((col, idx) => (
+                <th
+                  key={idx}
+                  className="p-3 text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold"
+                >
+                  {col}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {alerts.length === 0 ? (
+            {wsStatus !== 'connected' && alerts.length === 0 ? (
+              <ThreatSkeleton rows={5} />
+            ) : filteredAlerts.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: '60px 40px', textAlign: 'center' }}>
-                  {wsStatus !== 'connected' ? (
-                    <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                      Connecting to alert stream…
+                <td colSpan={8} className="p-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                      <ShieldCheck className="w-7 h-7 text-emerald-400" />
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '48px', height: '48px', borderRadius: '50%',
-                        border: '2px solid rgba(34,197,94,0.3)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '22px',
-                        boxShadow: '0 0 20px rgba(34,197,94,0.1)',
-                      }}>
-                        🛡
-                      </div>
-                      <div style={{ color: '#4ade80', fontWeight: 700, fontSize: '0.9rem', letterSpacing: '0.05em' }}>
-                        System Armed — No Threats Detected
-                      </div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', lineHeight: 1.6, maxWidth: '380px' }}>
-                        Live sensor stream is active. Alerts will appear here the instant the AI engine detects a threat and POSTs to{' '}
-                        <code style={{ color: '#7dd3fc', fontSize: '0.7rem' }}>POST /api/alerts</code>.
-                      </div>
+                    <div className="text-sm font-bold font-mono text-emerald-400 tracking-wider uppercase">
+                      Cyber Perimeter Armed // No Active Intrusions
                     </div>
-                  )}
+                    <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+                      All neural detection models are scanning ingress and egress packets. High-severity threats will appear here in real-time.
+                    </p>
+                  </div>
                 </td>
               </tr>
             ) : (
-              alerts.map((alert) => (
+              filteredAlerts.map((alert) => (
                 <AlertRow
                   key={alert._key}
                   alert={alert}
                   isExpanded={expandedId === alert._key}
                   onToggle={() => toggleRow(alert._key)}
                   onVerify={onVerifyRequest}
+                  isRecent={alert._isNew}
                 />
               ))
             )}

@@ -1,131 +1,188 @@
-// App.jsx — Anvex SOC Dashboard root layout
+// App.jsx — Avnex Futuristic Enterprise Cyber Operations Center Layout
 import { useState, useCallback } from 'react';
+import SidebarNav from './components/SidebarNav';
 import SystemHealthBar from './components/SystemHealthBar';
 import ThreatFeed from './components/ThreatFeed';
 import BlockchainVerifier from './components/BlockchainVerifier';
+import CyberGlobe3D from './components/CyberGlobe3D';
+import RadarLoader from './components/RadarLoader';
+import SettingsModal from './components/SettingsModal';
+import ExportLogsModal from './components/ExportLogsModal';
+import { Terminal, Activity } from 'lucide-react';
 
 function Header() {
   return (
-    <header style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '14px 28px',
-      borderBottom: '1px solid var(--border)',
-      background: 'var(--bg-panel)',
-      flexShrink: 0,
-    }}>
-      {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Animated shield icon */}
-        <div style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '8px',
-          background: 'linear-gradient(135deg, #1d4ed8, #7c3aed)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '18px',
-          boxShadow: '0 4px 16px rgba(59,130,246,0.4)',
-        }}>
-          🛡
-        </div>
-        <div>
-          <div style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '0.04em', color: '#e2e8f0' }}>
-            ANVEX
-          </div>
-          <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            AI Cyber Threat Intelligence Platform
+    <header className="h-16 px-6 bg-[#090e1c]/80 backdrop-blur-xl border-b border-sky-500/20 flex items-center justify-between z-20 shrink-0 select-none">
+      {/* Brand & 3D Interactive Cyber Globe */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <CyberGlobe3D size={44} />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-lg tracking-wider text-slate-100 font-mono">
+                AVNEX
+              </span>
+              <span className="text-[10px] font-mono font-bold bg-sky-500/20 text-cyan-300 border border-sky-500/40 px-2 py-0.5 rounded-full">
+                ENTERPRISE SOC v2.0
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
+              AI Cyber Threat Intelligence & Immutable Trust Layer
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Right: system tags */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{
-          background: 'rgba(34, 197, 94, 0.12)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          color: '#4ade80',
-          borderRadius: '20px',
-          padding: '3px 12px',
-          fontSize: '0.65rem',
-          fontWeight: 600,
-          letterSpacing: '0.06em',
-        }}>
-          ● LIVE
-        </span>
-        <span style={{
-          background: 'rgba(124, 58, 237, 0.12)',
-          border: '1px solid rgba(124, 58, 237, 0.3)',
-          color: '#c4b5fd',
-          borderRadius: '20px',
-          padding: '3px 12px',
-          fontSize: '0.65rem',
-          fontWeight: 600,
-          letterSpacing: '0.06em',
-        }}>
-          ⛓ ON-CHAIN
-        </span>
-        <span style={{
-          background: 'rgba(59, 130, 246, 0.12)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          color: '#93c5fd',
-          borderRadius: '20px',
-          padding: '3px 12px',
-          fontSize: '0.65rem',
-          fontWeight: 600,
-          letterSpacing: '0.06em',
-        }}>
-          SIH PS 26145
-        </span>
+      {/* Center Tactical Status */}
+      <div className="hidden md:flex items-center gap-6 text-xs font-mono">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400">DEFCON:</span>
+          <span className="text-emerald-400 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+            LEVEL 5 // NORMAL
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400">AI MODEL:</span>
+          <span className="text-cyan-300 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
+            XGB-NEURAL-V3
+          </span>
+        </div>
+      </div>
+
+      {/* Right: Status Pills */}
+      <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>LIVE STREAM</span>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(168,85,247,0.2)]">
+          <span>⛓ EVM #31337</span>
+        </div>
+
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-mono font-semibold">
+          <span>SIH PS 26145</span>
+        </div>
       </div>
     </header>
   );
 }
 
 export default function App() {
-  // Lifted state: lets ThreatFeed push an alert_id into BlockchainVerifier
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [pendingVerifyId, setPendingVerifyId] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+
+  // Handle Tab Selection
+  const handleSelectTab = (tabId) => {
+    if (tabId === 'settings') {
+      setIsSettingsOpen(true);
+      return;
+    }
+    if (tabId === 'export') {
+      setIsExportOpen(true);
+      return;
+    }
+    setActiveTab(tabId);
+  };
 
   const handleVerifyRequest = useCallback((alertId) => {
-    // Wrap in object so the same ID can be re-sent and force re-render
     setPendingVerifyId({ id: alertId, ts: Date.now() });
+    // If user is on threats-only tab, switch to dashboard or keep current
   }, []);
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      background: 'var(--bg-base)',
-      overflow: 'hidden',
-    }}>
-      <Header />
+    <div className="flex h-screen w-screen bg-[#050811] text-slate-100 overflow-hidden font-sans cyber-grid-bg relative">
+      {/* Radar Initial Thematic Loader */}
+      {initialLoading && (
+        <RadarLoader onComplete={() => setInitialLoading(false)} />
+      )}
 
-      <main style={{
-        flex: 1,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '16px 20px',
-        gap: '16px',
-      }}>
-        {/* System Health Bar — top strip */}
-        <SystemHealthBar />
+      {/* Collapsible Hamburger Sidebar */}
+      <SidebarNav
+        isExpanded={sidebarExpanded}
+        onToggle={() => setSidebarExpanded((prev) => !prev)}
+        activeTab={activeTab}
+        onSelectTab={handleSelectTab}
+      />
 
-        {/* Main content: Threat Feed + Verifier side-by-side */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          gap: '16px',
-          overflow: 'hidden',
-          minHeight: 0,
-        }}>
-          <ThreatFeed onVerifyRequest={handleVerifyRequest} />
-          <BlockchainVerifier externalRequest={pendingVerifyId} />
-        </div>
-      </main>
+      {/* Main Dashboard Workspace */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
+        <Header />
+
+        <main className="flex-1 overflow-hidden p-4 sm:p-5 flex flex-col gap-4">
+          {/* Top System Health Bar */}
+          <SystemHealthBar />
+
+          {/* Active View Routing */}
+          {activeTab === 'dashboard' && (
+            <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-h-0">
+              <ThreatFeed onVerifyRequest={handleVerifyRequest} />
+              <BlockchainVerifier externalRequest={pendingVerifyId} />
+            </div>
+          )}
+
+          {activeTab === 'threats' && (
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+              <ThreatFeed onVerifyRequest={handleVerifyRequest} />
+            </div>
+          )}
+
+          {activeTab === 'blockchain' && (
+            <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-h-0">
+              <BlockchainVerifier externalRequest={pendingVerifyId} />
+              <div className="flex-1 glass-panel p-6 border border-sky-500/20 overflow-y-auto space-y-4">
+                <div className="flex items-center gap-2 text-cyan-400 font-mono text-sm font-bold">
+                  <Terminal className="w-4 h-4" />
+                  IMMUTABLE AUDIT TRAIL // LOCAL HARDHAT NODE
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed font-mono">
+                  Every high-severity detection is computed into a deterministic SHA-256 hash incorporating the flow metadata, ML confidence, and timestamp. The hash is subsequently notarized into the Ethereum smart contract <code className="text-cyan-300">CyberThreatRegistry</code> for cryptographic non-repudiation.
+                </p>
+                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 font-mono text-xs">
+                  <div className="text-slate-500 uppercase text-[10px]">Smart Contract Method</div>
+                  <code className="text-emerald-300 block bg-slate-950 p-2.5 rounded border border-slate-800">
+                    function recordThreat(string calldata alertId, bytes32 alertHash, string calldata threatClass, uint256 confidence) external
+                  </code>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'health' && (
+            <div className="flex-1 glass-panel p-6 border border-sky-500/20 overflow-y-auto space-y-6">
+              <div className="flex items-center gap-2 text-cyan-400 font-mono text-sm font-bold">
+                <Activity className="w-4 h-4" />
+                EXTENDED HARDWARE & INGESTION TELEMETRY
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="glass-card p-4 border-sky-500/20">
+                  <div className="text-xs text-slate-400 font-mono uppercase mb-2">Ingress Network Adapter</div>
+                  <div className="text-lg font-mono text-cyan-400 font-bold">eth0 / promiscuous</div>
+                  <div className="text-xs text-slate-500 mt-1">Zero-copy packet ring buffer active</div>
+                </div>
+                <div className="glass-card p-4 border-sky-500/20">
+                  <div className="text-xs text-slate-400 font-mono uppercase mb-2">Inference Acceleration</div>
+                  <div className="text-lg font-mono text-emerald-400 font-bold">ONNX Runtime / AVX2</div>
+                  <div className="text-xs text-slate-500 mt-1">Batch size: 64 flows / inference</div>
+                </div>
+                <div className="glass-card p-4 border-sky-500/20">
+                  <div className="text-xs text-slate-400 font-mono uppercase mb-2">Block Gas Utilization</div>
+                  <div className="text-lg font-mono text-purple-400 font-bold">64,281 gas / tx</div>
+                  <div className="text-xs text-slate-500 mt-1">Constant O(1) storage overhead</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Settings & Export Modals */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <ExportLogsModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />
     </div>
   );
 }
