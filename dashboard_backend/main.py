@@ -105,6 +105,7 @@ def _init_blockchain() -> None:
         _blockchain_ready = True
         log.info("✅ Blockchain connected — contract at %s", info["address"])
     except Exception as exc:
+        # Graceful fallback if node is offline
         log.warning("⚠️  Blockchain unavailable (%s). Alerts will not be notarized.", exc)
 
 
@@ -160,7 +161,10 @@ async def notarize_to_blockchain(alert: dict) -> dict:
         )
 
         tx_hash = receipt.transactionHash.hex()
+        if not tx_hash.startswith("0x"):
+            tx_hash = "0x" + tx_hash
         block_number = receipt.blockNumber
+        _alert_tx_map[alert_id] = tx_hash
 
         log.info("⛓  Notarized alert=%s  tx=%s  block=%d", alert_id, tx_hash, block_number)
         return {
@@ -232,6 +236,7 @@ metrics_hub = ConnectionManager()
 _event_timestamps: collections.deque[float] = collections.deque(maxlen=1000)
 _pipeline_latencies: collections.deque[float] = collections.deque(maxlen=50)
 _recent_alerts: collections.deque[dict] = collections.deque(maxlen=50)
+_alert_tx_map: dict[str, str] = {}
 
 
 def _record_event(latency_ms: float | None = None) -> None:
@@ -466,10 +471,26 @@ async def verify_alert(alert_id: str) -> dict:
     try:
         result = contract.functions.verifyAlert(alert_id).call()
         alert_hash_bytes, threat_class, confidence_scaled, block_ts = result
+
+        # Retrieve the on-chain transaction hash
+        tx_h = _alert_tx_map.get(alert_id)
+        if not tx_h and w3 and contract:
+            try:
+                target_keccak = Web3.keccak(text=alert_id).hex()
+                logs = contract.events.AlertNotarized.get_logs(from_block=0)
+                for evt in logs:
+                    if evt.args.alertId.hex() == target_keccak:
+                        tx_h = "0x" + evt.transactionHash.hex()
+                        _alert_tx_map[alert_id] = tx_h
+                        break
+            except Exception:
+                pass
+
         return {
             "alert_id": alert_id,
             "verified": True,
             "alert_hash": "0x" + alert_hash_bytes.hex(),
+            "tx_hash": tx_h,
             "threat_class": threat_class,
             "confidence": confidence_scaled / 10_000,
             "block_timestamp": block_ts,

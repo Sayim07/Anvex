@@ -55,6 +55,7 @@ function TerminalVerifiedResult({ data }) {
           ['THREAT CLASS', data.threat_class],
           ['CONFIDENCE', `${(data.confidence * 100).toFixed(2)}%`],
           ['ALERT HASH', data.alert_hash],
+          ...(data.tx_hash ? [['TRANSACTION HASH', data.tx_hash]] : []),
           ['BLOCK TIME', blockDate ?? String(data.block_timestamp)],
         ].map(([label, value]) => (
           <div key={label} className="flex flex-col sm:flex-row sm:items-baseline justify-between py-1 border-b border-emerald-500/10">

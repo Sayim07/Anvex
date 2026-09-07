@@ -227,7 +227,55 @@ pm2 start ecosystem.config.js
 
 ---
 
-## 🔌 Automated Machine-to-Machine API Contract
+## 🔍 Independent Forensic Verification CLI (For Judges & Auditors)
+
+To prove to judges, forensic investigators, or legal compliance auditors that alerts are sealed into an independent consensus ledger (and not merely inside a local database), you can verify any threat directly from the command line:
+
+### 🎯 Universal Verification CLI (`verify_proof.py`)
+Pass **ANY** identifier—an **Ethereum Transaction Hash**, an **Alert SHA-256 Hash**, or an **Alert ID**:
+
+```powershell
+# Option A: Query using the Ethereum Transaction Hash
+python verify_proof.py fb8400c495ab9c7ce4d5af0d8333528688ab30958baf994fbdc577e1f0f918b3
+
+# Option B: Query using the Alert's SHA-256 Payload Hash
+python verify_proof.py 0xc6b94e2e5f0245fe806aad0c8428d07b02c9654855e54f3449e2d0c4aab998d0
+
+# Option C: Query using the Alert ID
+python verify_proof.py FL-5d1cc8dd86a1
+
+# Option D: Hands-Free (Automatically verifies the latest mined alert on-chain)
+python verify_proof.py
+```
+
+#### 📋 Terminal Receipt Output:
+```text
+====================================================================
+ANVEX ON-CHAIN FORENSIC PROOF VERIFIER (ETHEREUM LEDGER)
+====================================================================
+ STATUS           : [CRYPTOGRAPHICALLY VERIFIED - IMMUTABLE]
+ Alert ID         : FL-5d1cc8dd86a1
+ Threat Class     : DDOS
+ AI Confidence    : 95.48%
+ Alert SHA-256    : 0xc6b94e2e5f0245fe806aad0c8428d07b02c9654855e54f3449e2d0c4aab998d0
+ Transaction Hash : 0xfb8400c495ab9c7ce4d5af0d8333528688ab30958baf994fbdc577e1f0f918b3
+ Mined in Block   : 8
+ Block Timestamp  : 2026-09-07 14:28:49 UTC
+ Smart Contract   : 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+====================================================================
+ [Integrity Validated] Payload cannot be altered without breaking hash.
+ [Non-Repudiation]   Timestamp sealed in consensus block.
+====================================================================
+```
+
+### ⚡ 1-Liner PowerShell On-Chain Query
+```powershell
+python -c "from web3 import Web3; import json; w3 = Web3(Web3.HTTPProvider('http://127.0.0.1:8545')); info = json.load(open('trust_layer/deployed/contract_info.json')); c = w3.eth.contract(address=info['address'], abi=info['abi']); tx = w3.eth.get_transaction('0xfb8400c495ab9c7ce4d5af0d8333528688ab30958baf994fbdc577e1f0f918b3'); d = c.decode_function_input(tx.input)[1]; print(f'\n=== PROOF EXTRACTED FROM BLOCKCHAIN ===\nAlert ID     : {d[\"_alertId\"]}\nThreat Class : {d[\"_threatClass\"]}\nConfidence   : {d[\"_confidence\"]/100}%\nAlert Hash   : 0x{d[\"_alertHash\"].hex()}\nMined in Block: {tx.blockNumber}\n')"
+```
+275: 
+276: ---
+277: 
+278: ## 🔌 Automated Machine-to-Machine API Contract
 
 External AI engines or sensor nodes can transmit alerts automatically using a standard HTTP POST:
 
