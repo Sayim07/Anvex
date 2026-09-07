@@ -10,7 +10,7 @@ function WireframeRadar() {
     if (groupRef.current) {
       groupRef.current.rotation.y += 0.002;
       groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
-      groupRef.current.position.x = (state.mouse.x * 0.2);
+      groupRef.current.position.x = 2.0 + (state.mouse.x * 0.2);
       groupRef.current.position.y = (state.mouse.y * 0.2);
     }
   });
