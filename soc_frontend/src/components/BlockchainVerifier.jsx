@@ -88,6 +88,8 @@ function TerminalErrorResult({ message }) {
   );
 }
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
 export default function BlockchainVerifier({ externalRequest }) {
   const [alertId, setAlertId] = useState('');
   const [result, setResult] = useState(null);
@@ -104,7 +106,7 @@ export default function BlockchainVerifier({ externalRequest }) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/verify/${encodeURIComponent(trimmed)}`);
+      const res = await fetch(`${API_BASE}/api/verify/${encodeURIComponent(trimmed)}`);
       if (res.ok) {
         const data = await res.json();
         setResult(data);

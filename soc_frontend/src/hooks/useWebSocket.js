@@ -1,7 +1,7 @@
 // useWebSocket.js — shared hook for WebSocket connections with auto-reconnect
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const WS_BASE = ''; // Empty = uses Vite proxy (same origin)
+const WS_BASE = import.meta.env.VITE_WS_URL || '';
 
 export function useWebSocket(path, onMessage) {
   const [status, setStatus] = useState('connecting'); // connecting | connected | disconnected
@@ -11,8 +11,14 @@ export function useWebSocket(path, onMessage) {
   onMessageRef.current = onMessage;
 
   const connect = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${window.location.host}${path}`;
+    let url;
+    if (WS_BASE) {
+      const base = WS_BASE.replace(/\/$/, '');
+      url = `${base}${path}`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      url = `${protocol}//${window.location.host}${path}`;
+    }
 
     try {
       const ws = new WebSocket(url);

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 const MAX_ALERTS = 200;
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 function ThreatClassBadge({ cls }) {
   const styles = {
@@ -261,7 +262,7 @@ export default function ThreatFeed({ onVerifyRequest }) {
             <button
               onClick={() => {
                 setAlerts([]);
-                fetch('/api/alerts/clear', { method: 'POST' }).catch(() => {});
+                fetch(`${API_BASE}/api/alerts/clear`, { method: 'POST' }).catch(() => {});
               }}
               className="cyber-btn bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs py-1.5 px-2.5 cursor-pointer"
               title="Reset feed back to System Armed"
