@@ -10,6 +10,7 @@ import {
   Menu,
   ChevronLeft,
   ShieldCheck,
+  Home,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -26,6 +27,7 @@ export default function SidebarNav({
   onToggle,
   activeTab,
   onSelectTab,
+  onReturnToLanding,
   threatCount = 0,
 }) {
   const sidebarVariants = {
@@ -144,8 +146,29 @@ export default function SidebarNav({
         })}
       </nav>
 
-      {/* Bottom Node Health Status */}
-      <div className="p-3 border-t border-sky-500/15">
+      {/* Bottom Actions & Status */}
+      <div className="mt-auto flex flex-col p-3 border-t border-sky-500/15 gap-2">
+        <button
+          onClick={onReturnToLanding}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-sky-500/10 transition-colors w-full group cursor-pointer"
+          title={!isExpanded ? 'Exit to Landing' : undefined}
+        >
+          <Home className="w-5 h-5 shrink-0 group-hover:scale-105 transition-transform" />
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -6 }}
+                transition={{ duration: 0.15 }}
+                className="text-xs font-semibold whitespace-nowrap overflow-hidden"
+              >
+                Exit to Overview
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </button>
+
         <div className="flex items-center gap-3 px-2 py-2 rounded-lg bg-slate-900/60 border border-slate-800">
           <div className="relative flex shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />

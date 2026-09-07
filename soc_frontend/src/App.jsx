@@ -8,7 +8,9 @@ import CyberGlobe3D from './components/CyberGlobe3D';
 import RadarLoader from './components/RadarLoader';
 import SettingsModal from './components/SettingsModal';
 import ExportLogsModal from './components/ExportLogsModal';
+import HeroLanding from './components/HeroLanding';
 import { Terminal, Activity } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function Header() {
   return (
@@ -60,8 +62,8 @@ function Header() {
           <span>⛓ EVM #31337</span>
         </div>
 
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-mono font-semibold">
-          <span>SIH PS 26145</span>
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+          <span>AIR-GAP SECURED // DIODE RX</span>
         </div>
       </div>
     </header>
@@ -69,6 +71,7 @@ function Header() {
 }
 
 export default function App() {
+  const [currentView, setCurrentView] = useState('landing');
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [pendingVerifyId, setPendingVerifyId] = useState(null);
@@ -95,25 +98,38 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-screen w-screen bg-[#050811] text-slate-100 overflow-hidden font-sans cyber-grid-bg relative">
-      {/* Radar Initial Thematic Loader */}
-      {initialLoading && (
-        <RadarLoader onComplete={() => setInitialLoading(false)} />
-      )}
+    <div className="flex h-screen w-screen bg-[#050811] text-slate-100 overflow-hidden font-sans relative">
+      <AnimatePresence mode="wait">
+        {currentView === 'landing' ? (
+          <HeroLanding key="landing" onEnterDashboard={() => setCurrentView('dashboard')} />
+        ) : (
+          <motion.div 
+            key="dashboard"
+            initial={{ opacity: 0, scale: 0.98, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.02, y: -15 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="flex h-full w-full cyber-grid-bg relative"
+          >
+            {/* Radar Initial Thematic Loader */}
+            {initialLoading && (
+              <RadarLoader onComplete={() => setInitialLoading(false)} />
+            )}
 
-      {/* Collapsible Hamburger Sidebar */}
-      <SidebarNav
-        isExpanded={sidebarExpanded}
-        onToggle={() => setSidebarExpanded((prev) => !prev)}
-        activeTab={activeTab}
-        onSelectTab={handleSelectTab}
-      />
+            {/* Collapsible Hamburger Sidebar */}
+            <SidebarNav
+              isExpanded={sidebarExpanded}
+              onToggle={() => setSidebarExpanded((prev) => !prev)}
+              activeTab={activeTab}
+              onSelectTab={handleSelectTab}
+              onReturnToLanding={() => setCurrentView('landing')}
+            />
 
-      {/* Main Dashboard Workspace */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
-        <Header />
+            {/* Main Dashboard Workspace */}
+            <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
+              <Header />
 
-        <main className="flex-1 overflow-hidden p-4 sm:p-5 flex flex-col gap-4">
+              <main className="flex-1 overflow-hidden p-4 sm:p-5 flex flex-col gap-4">
           {/* Top System Health Bar */}
           <SystemHealthBar />
 
@@ -183,6 +199,9 @@ export default function App() {
       {/* Settings & Export Modals */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <ExportLogsModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
