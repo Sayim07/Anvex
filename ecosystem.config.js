@@ -1,8 +1,10 @@
-﻿module.exports = {
+const path = require("path");
+
+module.exports = {
   apps: [
     {
       name: "anvex-blockchain",
-      script: "C:/Users/sayim/OneDrive/Documents/Avnex/pm2-blockchain.js",
+      script: path.join(__dirname, "pm2-blockchain.js"),
       autorestart: true,
       watch: false,
       max_memory_restart: "512M",
@@ -10,7 +12,7 @@
     },
     {
       name: "anvex-backend",
-      cwd: "C:/Users/sayim/OneDrive/Documents/Avnex/dashboard_backend",
+      cwd: path.join(__dirname, "dashboard_backend"),
       script: "C:/Users/sayim/AppData/Local/Programs/Python/Python311/python.exe",
       args: "-m uvicorn main:app --host 0.0.0.0 --port 8000",
       autorestart: true,
@@ -22,7 +24,7 @@
     },
     {
       name: "anvex-frontend",
-      script: "C:/Users/sayim/OneDrive/Documents/Avnex/pm2-frontend.js",
+      script: path.join(__dirname, "pm2-frontend.js"),
       autorestart: true,
       watch: false,
       max_memory_restart: "512M",

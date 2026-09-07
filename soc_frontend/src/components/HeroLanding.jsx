@@ -1,7 +1,8 @@
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
-import { ShieldCheck, ArrowRight, Activity, Cpu, Layers, Lock } from 'lucide-react';
+import { ArrowRight, Activity, Cpu, Layers, Lock } from 'lucide-react';
+import CyberGlobe3D from './CyberGlobe3D';
 
 function WireframeRadar() {
   const groupRef = useRef();
@@ -58,13 +59,11 @@ export default function HeroLanding({ onEnterDashboard }) {
         
         {/* Top Nav */}
         <header className="flex items-center justify-between p-6 pointer-events-auto shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]">
-              <ShieldCheck className="w-5 h-5 text-cyan-300" />
-            </div>
+          <div className="flex items-center gap-3">
+            <CyberGlobe3D size={44} />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-wider text-slate-100 font-mono">AVNEX</span>
+                <span className="font-extrabold text-xl tracking-wider text-slate-100 font-mono">ANVEX</span>
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
@@ -77,9 +76,6 @@ export default function HeroLanding({ onEnterDashboard }) {
           </div>
 
           <div className="flex items-center gap-4 md:gap-6">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-              NETWORK DIODE: SYNCHRONIZED
-            </div>
             <button 
               onClick={onEnterDashboard}
               className="flex items-center gap-2 px-4 md:px-5 py-2 rounded-lg bg-sky-500/10 border border-sky-500/40 text-cyan-300 font-mono text-sm hover:bg-sky-500/20 hover:shadow-[0_0_20px_rgba(56,189,248,0.4)] transition-all cursor-pointer pointer-events-auto"
@@ -98,10 +94,6 @@ export default function HeroLanding({ onEnterDashboard }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-semibold mb-6 shadow-[0_0_10px_rgba(99,102,241,0.2)]">
-              ZERO-TRUST SURVEILLANCE FOR AIR-GAPPED INFRASTRUCTURE
-            </div>
-            
             <h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6 drop-shadow-lg">
               Passive AI Surveillance Radar <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">

@@ -1,6 +1,7 @@
-﻿const { spawn } = require("child_process");
+const { spawn } = require("child_process");
+const path = require("path");
 const proc = spawn("C:\\nvm4w\\nodejs\\npm.cmd", ["run", "dev"], {
-  cwd: "C:\\Users\\sayim\\OneDrive\\Documents\\Avnex\\soc_frontend",
+  cwd: path.join(__dirname, "soc_frontend"),
   stdio: "inherit",
   shell: true,
 });

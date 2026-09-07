@@ -186,7 +186,7 @@ export default function SidebarNav({
                   SENSORS ONLINE
                 </div>
                 <div className="text-[9px] font-mono text-slate-500">
-                  BLOCKCHAIN NODE #31337
+                  BLOCKCHAIN TRUST LAYER
                 </div>
               </motion.div>
             )}

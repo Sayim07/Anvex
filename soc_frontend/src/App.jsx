@@ -1,4 +1,4 @@
-// App.jsx — Avnex Futuristic Enterprise Cyber Operations Center Layout
+// App.jsx — Anvex Futuristic Enterprise Cyber Operations Center Layout
 import { useState, useCallback } from 'react';
 import SidebarNav from './components/SidebarNav';
 import SystemHealthBar from './components/SystemHealthBar';
@@ -22,7 +22,7 @@ function Header() {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-lg tracking-wider text-slate-100 font-mono">
-                AVNEX
+                ANVEX
               </span>
               <span className="text-[10px] font-mono font-bold bg-sky-500/20 text-cyan-300 border border-sky-500/40 px-2 py-0.5 rounded-full">
                 ENTERPRISE SOC v2.0
@@ -38,12 +38,6 @@ function Header() {
       {/* Center Tactical Status */}
       <div className="hidden md:flex items-center gap-6 text-xs font-mono">
         <div className="flex items-center gap-2">
-          <span className="text-slate-400">DEFCON:</span>
-          <span className="text-emerald-400 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-            LEVEL 5 // NORMAL
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
           <span className="text-slate-400">AI MODEL:</span>
           <span className="text-cyan-300 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
             XGB-NEURAL-V3
@@ -56,14 +50,6 @@ function Header() {
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>LIVE STREAM</span>
-        </div>
-
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(168,85,247,0.2)]">
-          <span>⛓ EVM #31337</span>
-        </div>
-
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(16,185,129,0.25)]">
-          <span>AIR-GAP SECURED // DIODE RX</span>
         </div>
       </div>
     </header>

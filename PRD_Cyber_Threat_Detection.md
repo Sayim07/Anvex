@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## AI-Based Cyber Threat Detection System for Unidirectional IP Traffic
 
-**Project Codename:** Avnex
+**Project Codename:** Anvex
 **Document Owner:** Sayim (Full-Stack & Blockchain Developer)
 **Team:** Sayim (Backend/Blockchain/Frontend), Sarbottam (AI/Detection Models), Ruparna (Network/Data Pipeline)
 **Version:** 1.0

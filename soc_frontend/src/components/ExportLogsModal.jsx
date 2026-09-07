@@ -9,7 +9,7 @@ export default function ExportLogsModal({ isOpen, onClose, alerts = [] }) {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(alerts, null, 2));
     const dlAnchor = document.createElement('a');
     dlAnchor.setAttribute('href', dataStr);
-    dlAnchor.setAttribute('download', `avnex_threat_feed_${new Date().toISOString().slice(0, 19)}.json`);
+    dlAnchor.setAttribute('download', `anvex_threat_feed_${new Date().toISOString().slice(0, 19)}.json`);
     dlAnchor.click();
     onClose();
   };
@@ -35,7 +35,7 @@ export default function ExportLogsModal({ isOpen, onClose, alerts = [] }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `avnex_threat_feed_${new Date().toISOString().slice(0, 19)}.csv`);
+    link.setAttribute('download', `anvex_threat_feed_${new Date().toISOString().slice(0, 19)}.csv`);
     link.click();
     onClose();
   };

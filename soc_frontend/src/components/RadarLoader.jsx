@@ -82,7 +82,7 @@ export default function RadarLoader({ onComplete }) {
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00f0ff]" />
           <span className="text-xs font-mono tracking-widest text-cyan-400 uppercase font-bold">
-            AVNEX SOC DEFENSE MATRIX
+            ANVEX SOC DEFENSE MATRIX
           </span>
         </div>
 
