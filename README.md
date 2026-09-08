@@ -136,7 +136,7 @@ To run and demonstrate the entire platform in **Real-Time Production Mode (Zero 
 *Runs your local Ethereum proof ledger in the background.*
 
 ```powershell
-cd trust_layer
+cd c:\Users\sayim\OneDrive\Documents\Avnex\trust_layer
 npx hardhat node
 ```
 * **What it does:** Starts an isolated Ethereum blockchain JSON-RPC node on `http://127.0.0.1:8545`. It pre-funds 20 test accounts with 10,000 ETH each to notarize cryptographic threat hashes.
@@ -149,11 +149,11 @@ npx hardhat node
 
 ```powershell
 # Step A: Deploy the ForensicAuditLedger contract to the running blockchain
-cd trust_layer
+cd c:\Users\sayim\OneDrive\Documents\Avnex\trust_layer
 npm run deploy
 
 # Step B: Launch the FastAPI production server
-cd dashboard_backend
+cd c:\Users\sayim\OneDrive\Documents\Avnex\dashboard_backend
 uvicorn main:app --reload --port 8000
 ```
 * **What it does:**
@@ -167,7 +167,7 @@ uvicorn main:app --reload --port 8000
 *Hosts the mission-control Security Operations Center dashboard.*
 
 ```powershell
-cd soc_frontend
+cd c:\Users\sayim\OneDrive\Documents\Avnex\soc_frontend
 npm run dev
 ```
 * **What it does:** Starts Vite dev server and opens the dashboard at **`http://localhost:5173`**. Connects via WebSockets and awaits incoming threats with status **`🟢 System Armed — No Threats Detected`**.
@@ -178,8 +178,13 @@ npm run dev
 ### 🧠 Terminal 4: The Live AI Attacker & Test Catalog (Your Controller)
 *Use this terminal as your live controller to trigger real attacks against the network:*
 
+```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex
+```
+
 #### 🎯 Option A: The "Hands-Free" Continuous Demonstration Loop (Recommended)
 ```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex
 python ai_engine/live_inference.py --loop --interval 3.5
 ```
 * **What it does:** Continuously cycles through all network attack PCAPs every 3.5s, parses raw Scapy packet flows, computes XGBoost + Isolation Forest inferences, calculates SHAP feature attributions, notarizes hashes on-chain, and streams them into the UI.
@@ -187,7 +192,7 @@ python ai_engine/live_inference.py --loop --interval 3.5
 ---
 
 #### 🎯 Option B: Targeted Individual Attack Testing
-You can trigger any specific cyber threat vector on demand:
+You can trigger any specific cyber threat vector on demand (run from `c:\Users\sayim\OneDrive\Documents\Avnex`):
 
 | Attack Vector | Terminal 4 Command | Detection Mechanism & Indicators |
 | :--- | :--- | :--- |
@@ -205,10 +210,28 @@ You can trigger any specific cyber threat vector on demand:
 If you prefer not to manage multiple terminal tabs, launch Terminals 1, 2, and 3 simultaneously with PM2:
 
 ```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex
 pm2 start ecosystem.config.js
 ```
 * Automatically spawns `anvex-blockchain`, `anvex-backend`, and `anvex-frontend` in background daemons.
 * Manage with `pm2 status`, `pm2 logs`, or `pm2 stop all`.
+
+---
+
+### 🏆 4-Step Presentation Walkthrough for Judges
+
+1. **Clean Slate Start:**
+   Open `http://localhost:5173`. Click **`🧹 Clear`** in the Live Threat Feed header so the judges see **`0 Threats / System Armed`**.
+2. **Execute Live Strike:**
+   In Terminal 4 (`c:\Users\sayim\OneDrive\Documents\Avnex`), run:
+   ```powershell
+   python ai_engine/live_inference.py --pcap pcaps/ddos.pcap
+   ```
+   Within 2 seconds, the critical alert slides in at the top of the feed with glowing red badges.
+3. **Show Mathematical Explainability (SHAP):**
+   Click the alert row to expand the **Evidence Drawer**. Point out the **`🧠 AI Explainability (SHAP Values)`** panel showing feature contribution weights (e.g., `ngram_probability`, `pps`, `outbound_inbound_ratio`).
+4. **Prove Legal Non-Repudiation (On-Chain Verification):**
+   Click **`⛓ Verify On-Chain`**. The system queries the Ethereum contract at runtime and renders the green **`CRYPTOGRAPHICALLY VERIFIED`** seal with block height and timestamp proof.
 
 ---
 
@@ -221,6 +244,8 @@ To prove to judges, forensic investigators, or legal compliance auditors that al
 Pass **ANY** identifier—an **Ethereum Transaction Hash**, an **Alert SHA-256 Hash**, or an **Alert ID**:
 
 ```powershell
+cd c:\Users\sayim\OneDrive\Documents\Avnex
+
 # Option A: Query using the Ethereum Transaction Hash
 python verify_proof.py fb8400c495ab9c7ce4d5af0d8333528688ab30958baf994fbdc577e1f0f918b3
 
